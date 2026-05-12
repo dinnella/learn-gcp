@@ -76,14 +76,15 @@ resource "cloudflare_ruleset" "rate_limit" {
 
   rules {
     enabled     = true
-    description = "${var.rate_limit_rpm} req/min/IP"
+      description = "${var.rate_limit_rp10s} req/10s/IP"
     expression  = "(http.host eq \"${var.hostname}\")"
     action      = "block"
     ratelimit {
       # cf.colo.id is required: Cloudflare counts requests per colo, not globally.
       characteristics     = ["cf.colo.id", "ip.src"]
-      period              = 60
-      requests_per_period = var.rate_limit_rpm
+      # Free plan only supports period=10 (10-second window).
+      period              = 10
+      requests_per_period = var.rate_limit_rp10s
       mitigation_timeout  = 60
     }
   }

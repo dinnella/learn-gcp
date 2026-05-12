@@ -20,8 +20,8 @@ variable "edge_shared_secret" {
   sensitive   = true
 }
 
-variable "rate_limit_rpm" {
-  description = "Requests per IP per minute before the rate limiter blocks for 60s."
+variable "rate_limit_rp10s" {
+  description = "Requests per IP per 10 seconds before the rate limiter blocks for 60s (Free plan only supports period=10)."
   type        = number
-  default     = 60
+  default     = 10
 }
