@@ -210,16 +210,20 @@ jobs:
           TF_VAR_origin_hostname: ${{ steps.gcp_out.outputs.service_hostname }}
         run: |
           ZONE_NAME=$(echo "${{ vars.PUBLIC_DOMAIN }}" | awk -F. '{print $(NF-1)"."$NF}')
-          ZONE_ID=$(curl -sS -f -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones?name=$ZONE_NAME" | \
-            jq -r '.result[0].id')
+          ZONES=$(curl -sS -f -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones?name=$ZONE_NAME")
+          ZONE_ID=$(echo "$ZONES" | jq -r '.result[0].id')
+          ACCOUNT_ID=$(echo "$ZONES" | jq -r '.result[0].account.id')
+          # Export for validate + apply steps that follow in this job.
+          echo "TF_VAR_account_id=$ACCOUNT_ID" >> "$GITHUB_ENV"
+          export TF_VAR_account_id="$ACCOUNT_ID"
+
           RULESETS=$(curl -sS -f -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/rulesets")
 
+          # Only the rate-limit ruleset remains; edge_auth is replaced by a Worker.
           declare -A PHASE_TO_RESOURCE=(
-            [http_request_late_transform]=cloudflare_ruleset.edge_auth
             [http_ratelimit]=cloudflare_ruleset.rate_limit
-            [http_request_origin]=cloudflare_ruleset.origin_override
           )
           for PHASE in "${!PHASE_TO_RESOURCE[@]}"; do
             RESOURCE="${PHASE_TO_RESOURCE[$PHASE]}"

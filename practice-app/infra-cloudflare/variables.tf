@@ -25,3 +25,8 @@ variable "rate_limit_rp10s" {
   type        = number
   default     = 10
 }
+
+variable "account_id" {
+  description = "Cloudflare account ID. Required for Workers scripts (account-scoped resource). Find it on the Cloudflare dashboard overview page for the zone."
+  type        = string
+}

@@ -66,54 +66,53 @@ resource "cloudflare_zone_setting" "browser_check" {
   value      = "on"
 }
 
-# ----- Transform Rule: inject X-Edge-Auth on every request to our hostname -----
-# This is what gates Cloud Run: the origin's middleware rejects any request
-# that doesn't carry this exact header value.
-resource "cloudflare_ruleset" "edge_auth" {
-  zone_id     = local.zone_id
-  name        = "edge-auth-injector"
-  description = "Inject shared-secret header so Cloud Run accepts only Cloudflare-proxied traffic."
-  kind        = "zone"
-  phase       = "http_request_late_transform"
-
-  rules = [{
-    enabled     = true
-    description = "Inject X-Edge-Auth for ${var.hostname}"
-    expression  = "(http.host eq \"${var.hostname}\")"
-    action      = "rewrite"
-    action_parameters = {
-      headers = {
-        "X-Edge-Auth" = {
-          operation = "set"
-          value     = var.edge_shared_secret
-        }
+# ----- Worker: rewrite Host + inject X-Edge-Auth -----
+# Cloudflare forwards the original Host (levelup.next3k.com) to the origin,
+# but Cloud Run only knows its *.run.app hostname. Transform rules can't set
+# the Host header (error 20087) and Origin Rules require a paid plan (error
+# 'not entitled to use HostHeader override'). A Worker has full control over
+# the upstream fetch and is free up to 100k req/day.
+#
+# The Worker also injects X-Edge-Auth so Cloud Run middleware can reject
+# any traffic that doesn't come through Cloudflare.
+resource "cloudflare_workers_script" "host_proxy" {
+  account_id  = var.account_id
+  script_name = "levelup-proxy"
+  main_module = "worker.js"
+  content     = <<-JS
+    export default {
+      async fetch(request, env) {
+        const url = new URL(request.url);
+        url.hostname = env.ORIGIN_HOSTNAME;
+        const headers = new Headers(request.headers);
+        headers.set('X-Edge-Auth', env.EDGE_SHARED_SECRET);
+        return fetch(url.toString(), {
+          method: request.method,
+          headers,
+          body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
+          redirect: 'follow',
+        });
       }
-    }
-  }]
+    };
+  JS
+  bindings = [
+    {
+      name = "ORIGIN_HOSTNAME"
+      type = "plain_text"
+      text = var.origin_hostname
+    },
+    {
+      name = "EDGE_SHARED_SECRET"
+      type = "secret_text"
+      text = var.edge_shared_secret
+    },
+  ]
 }
 
-# ----- Origin Rule: override Host header so Cloud Run routes the request -----
-# Cloudflare forwards the original Host (levelup.next3k.com) to the origin by
-# default. Cloud Run only knows its *.run.app hostname and returns 404 for
-# anything else. Origin Rules (http_request_origin / route action) are the
-# only Cloudflare mechanism that can override the Host sent to the origin;
-# transform rules explicitly block 'set' on the Host header (error 20087).
-resource "cloudflare_ruleset" "origin_override" {
-  zone_id     = local.zone_id
-  name        = "origin-host-override"
-  description = "Route ${var.hostname} requests to Cloud Run with correct Host header."
-  kind        = "zone"
-  phase       = "http_request_origin"
-
-  rules = [{
-    enabled     = true
-    description = "Override Host → ${var.origin_hostname}"
-    expression  = "(http.host eq \"${var.hostname}\")"
-    action      = "route"
-    action_parameters = {
-      host_header = var.origin_hostname
-    }
-  }]
+resource "cloudflare_workers_route" "app" {
+  zone_id = local.zone_id
+  pattern = "${var.hostname}/*"
+  script  = cloudflare_workers_script.host_proxy.script_name
 }
 
 # ----- Per-IP rate limit (Free plan: 1 rule allowed per zone) -----
