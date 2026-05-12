@@ -36,3 +36,34 @@ variable "firestore_location" {
   type        = string
   default     = "nam5"
 }
+
+variable "domain" {
+  description = "Public custom domain for the load-balanced service. Empty string disables the LB."
+  type        = string
+  default     = ""
+}
+
+variable "enable_lb" {
+  description = "Provision the global HTTPS LB + Cloud Armor + managed cert in front of Cloud Run. Requires var.domain."
+  type        = bool
+  default     = false
+}
+
+variable "restrict_ingress_to_lb" {
+  description = "When true, Cloud Run only accepts traffic from the LB (cuts off the *.run.app URL). Flip on AFTER DNS is pointed at the LB IP and the cert is ACTIVE."
+  type        = bool
+  default     = false
+}
+
+variable "rate_limit_rpm" {
+  description = "Per-IP requests-per-minute allowed by Cloud Armor before throttling."
+  type        = number
+  default     = 60
+}
+
+variable "edge_shared_secret" {
+  description = "Secret value Cloudflare must inject as X-Edge-Auth on every origin request. Empty disables edge auth (origin accepts anyone). Pass via -var or TF_VAR_edge_shared_secret; do NOT commit."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

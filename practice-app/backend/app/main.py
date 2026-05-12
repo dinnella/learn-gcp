@@ -5,10 +5,11 @@ import logging
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from . import sessions as sessions_svc
 from .db import QUESTIONS, get_db
@@ -36,6 +37,92 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
 )
+
+
+# ---------- Security headers ----------
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Set conservative security headers on every response.
+
+    HSTS is only emitted when the request arrived over HTTPS (Cloud Run /
+    the load balancer set `X-Forwarded-Proto: https`) so local HTTP dev
+    isn't pinned to HTTPS in the browser.
+    """
+
+    CSP = (
+        "default-src 'self'; "
+        "img-src 'self' data:; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
+        "connect-src 'self'; "
+        "font-src 'self' data:; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response: Response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        response.headers.setdefault("Content-Security-Policy", self.CSP)
+        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        if proto == "https":
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ---------- Edge auth (Cloudflare-in-front) ----------
+
+class EdgeAuthMiddleware(BaseHTTPMiddleware):
+    """Require a shared-secret header on every request when EDGE_SHARED_SECRET is set.
+
+    Pattern: Cloudflare sits in front of Cloud Run as a proxied CNAME and a
+    Transform Rule injects `X-Edge-Auth: <secret>` on every origin request.
+    Without that header (i.e. a direct hit to `*.run.app`), the request is
+    rejected with 403. This gives us "only Cloudflare can reach the origin"
+    semantics without paying for a GCP load balancer.
+
+    `/api/health` is exempted so Cloud Run's startup probe still works.
+    Local dev (no env var set) skips the check entirely.
+    """
+
+    EXEMPT_PATHS = {"/api/health"}
+    HEADER_NAME = "x-edge-auth"
+
+    def __init__(self, app, secret: str | None) -> None:
+        super().__init__(app)
+        self._secret = secret
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if self._secret and request.url.path not in self.EXEMPT_PATHS:
+            presented = request.headers.get(self.HEADER_NAME, "")
+            if not _secrets_compare(presented, self._secret):
+                return Response(status_code=403, content="forbidden")
+        return await call_next(request)
+
+
+def _secrets_compare(a: str, b: str) -> bool:
+    """Constant-time string comparison."""
+    import hmac
+    return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
+
+
+_EDGE_SECRET = os.environ.get("EDGE_SHARED_SECRET", "").strip() or None
+if _EDGE_SECRET:
+    log.info("edge-auth: enabled (origin requires X-Edge-Auth header)")
+else:
+    log.info("edge-auth: disabled (no EDGE_SHARED_SECRET set)")
+app.add_middleware(EdgeAuthMiddleware, secret=_EDGE_SECRET)
 
 
 # ---------- API ----------

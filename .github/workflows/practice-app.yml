@@ -48,7 +48,14 @@ jobs:
 
       - name: tofu apply (bootstrap if needed)
         working-directory: practice-app/infra
-        run: tofu apply -auto-approve -var "project_id=${{ vars.GCP_PROJECT_ID }}"
+        env:
+          TF_VAR_edge_shared_secret: ${{ secrets.EDGE_SHARED_SECRET }}
+        run: |
+          tofu apply -auto-approve \
+            -var "project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var "domain=${{ vars.PUBLIC_DOMAIN }}" \
+            -var "enable_lb=${{ vars.ENABLE_LB || 'false' }}" \
+            -var "restrict_ingress_to_lb=${{ vars.RESTRICT_INGRESS_TO_LB || 'false' }}"
 
       # 2) Build & push the container image to Artifact Registry.
       - name: Configure docker for AR
@@ -65,10 +72,15 @@ jobs:
       # 3) Re-apply infra with the new image tag — Cloud Run rolls forward atomically.
       - name: tofu apply (deploy new revision)
         working-directory: practice-app/infra
+        env:
+          TF_VAR_edge_shared_secret: ${{ secrets.EDGE_SHARED_SECRET }}
         run: |
           tofu apply -auto-approve \
             -var "project_id=${{ vars.GCP_PROJECT_ID }}" \
-            -var "image_tag=${{ github.sha }}"
+            -var "image_tag=${{ github.sha }}" \
+            -var "domain=${{ vars.PUBLIC_DOMAIN }}" \
+            -var "enable_lb=${{ vars.ENABLE_LB || 'false' }}" \
+            -var "restrict_ingress_to_lb=${{ vars.RESTRICT_INGRESS_TO_LB || 'false' }}"
 
       # 4) Seed Firestore (idempotent — overwrites by document ID).
       - name: Install seeder deps
@@ -81,6 +93,71 @@ jobs:
         run: python -m backend.app.seed_emulator || python backend/app/seed_emulator.py
 
       - name: Print service URL
+        id: service_url
         working-directory: practice-app/infra
         run: |
-          echo "::notice title=Practice App URL::$(tofu output -raw service_url)"
+          URL=$(tofu output -raw service_url)
+          HOST=$(tofu output -raw service_hostname)
+          echo "::notice title=Practice App URL::$URL"
+          echo "service_hostname=$HOST" >> "$GITHUB_OUTPUT"
+
+  cloudflare-apply:
+    needs: build-deploy
+    if: ${{ vars.ENABLE_CLOUDFLARE == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # WIF login is only used to access the GCS tfstate bucket — we re-use the
+      # same backend so cloudflare state lives next to gcp state under a
+      # different prefix.
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: '1.8.5'
+          tofu_wrapper: false
+
+      # Re-read the Cloud Run hostname from the GCP state so we don't depend on
+      # passing it between jobs (more robust if this job is re-run alone).
+      - name: tofu init (gcp — read service_hostname)
+        working-directory: practice-app/infra
+        run: |
+          tofu init -input=false \
+            -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
+            -backend-config="prefix=practice-app"
+
+      - name: Read Cloud Run hostname
+        id: gcp_out
+        working-directory: practice-app/infra
+        run: echo "service_hostname=$(tofu output -raw service_hostname)" >> "$GITHUB_OUTPUT"
+
+      - name: tofu init (cloudflare)
+        working-directory: practice-app/infra-cloudflare
+        run: |
+          tofu init -input=false \
+            -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
+            -backend-config="prefix=practice-app-cloudflare"
+
+      - name: tofu apply (cloudflare)
+        working-directory: practice-app/infra-cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_edge_shared_secret: ${{ secrets.EDGE_SHARED_SECRET }}
+        run: |
+          tofu apply -auto-approve \
+            -var "zone_id=${{ secrets.CLOUDFLARE_ZONE_ID }}" \
+            -var "hostname=${{ vars.PUBLIC_DOMAIN }}" \
+            -var "origin_hostname=${{ steps.gcp_out.outputs.service_hostname }}"
+
+      - name: Print public URL
+        working-directory: practice-app/infra-cloudflare
+        run: echo "::notice title=Public URL::$(tofu output -raw public_url)"

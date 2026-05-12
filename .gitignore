@@ -38,3 +38,6 @@ node_modules/
 
 # Misc
 *.pdf
+
+# Local-only operator notes (go-live runbook, secrets cheat sheet, etc.)
+todo.md

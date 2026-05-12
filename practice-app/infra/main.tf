@@ -4,6 +4,10 @@ locals {
     "artifactregistry.googleapis.com",
     "firestore.googleapis.com",
     "iam.googleapis.com",
+    "compute.googleapis.com",
+    "certificatemanager.googleapis.com",
+    "containerscanning.googleapis.com",
+    "secretmanager.googleapis.com",
   ]
 
   ar_image_uri = "${var.region}-docker.pkg.dev/${var.project_id}/${var.ar_repo_name}/${var.service_name}:${var.image_tag}"
@@ -11,6 +15,9 @@ locals {
   # Bootstrap placeholder image for the very first apply (before CI has pushed
   # anything). On subsequent applies, var.image_tag is set to the commit SHA.
   effective_image = var.image_tag == "bootstrap" ? "us-docker.pkg.dev/cloudrun/container/hello" : local.ar_image_uri
+
+  lb_enabled       = var.enable_lb && var.domain != ""
+  cloud_run_ingress = var.restrict_ingress_to_lb ? "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER" : "INGRESS_TRAFFIC_ALL"
 }
 
 resource "google_project_service" "apis" {
@@ -26,6 +33,11 @@ resource "google_firestore_database" "default" {
   name        = "(default)"
   location_id = var.firestore_location
   type        = "FIRESTORE_NATIVE"
+
+  # Point-in-time recovery: 7-day window of historical reads + restore.
+  point_in_time_recovery_enablement = "POINT_IN_TIME_RECOVERY_ENABLED"
+  # Refuse `tofu destroy` of the database; remove this if you ever need to nuke it.
+  delete_protection_state = "DELETE_PROTECTION_ENABLED"
 
   depends_on = [google_project_service.apis]
 }
@@ -66,11 +78,36 @@ resource "google_project_iam_member" "runtime_metrics" {
   member  = "serviceAccount:${google_service_account.runtime.email}"
 }
 
+# ---------- Edge shared secret (Cloudflare → origin) ----------
+# Created/updated only when var.edge_shared_secret is non-empty. Stored in
+# Secret Manager so it never appears in Cloud Run's plain-env config.
+resource "google_secret_manager_secret" "edge_auth" {
+  count     = var.edge_shared_secret == "" ? 0 : 1
+  secret_id = "${var.service_name}-edge-auth"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "edge_auth" {
+  count       = var.edge_shared_secret == "" ? 0 : 1
+  secret      = google_secret_manager_secret.edge_auth[0].id
+  secret_data = var.edge_shared_secret
+}
+
+resource "google_secret_manager_secret_iam_member" "edge_auth_runtime" {
+  count     = var.edge_shared_secret == "" ? 0 : 1
+  secret_id = google_secret_manager_secret.edge_auth[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runtime.email}"
+}
+
 # ---------- Cloud Run service ----------
 resource "google_cloud_run_v2_service" "app" {
   name     = var.service_name
   location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  ingress  = local.cloud_run_ingress
 
   template {
     service_account = google_service_account.runtime.email
@@ -89,6 +126,19 @@ resource "google_cloud_run_v2_service" "app" {
       env {
         name  = "APP_LOG_LEVEL"
         value = "INFO"
+      }
+
+      dynamic "env" {
+        for_each = var.edge_shared_secret == "" ? [] : [1]
+        content {
+          name = "EDGE_SHARED_SECRET"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.edge_auth[0].secret_id
+              version = "latest"
+            }
+          }
+        }
       }
 
       resources {
