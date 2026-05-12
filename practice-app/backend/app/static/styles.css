@@ -402,9 +402,7 @@ th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: u
 /* GitHub nav link */
 .github-nav {
   display: inline-flex; align-items: center; gap: 0.4rem;
-  background: transparent; color: var(--muted); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 0.45rem 0.85rem;
-  font-size: 0.88rem; font-weight: 500; text-decoration: none;
+  text-decoration: none;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .github-nav:hover { color: var(--text); border-color: #3a4256; background: var(--panel-2); }
