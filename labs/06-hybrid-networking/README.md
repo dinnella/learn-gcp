@@ -37,6 +37,24 @@ VPC-A (us-central1)  ===HA VPN tunnel pair===  VPC-B (us-east1)
 5. **VPC peering is non-transitive** — same as AWS. For "transitive hub" use Network Connectivity Center or Shared VPC.
 6. **Cloud DNS** integrates with on-prem via DNS forwarding zones; common pattern for hybrid name resolution.
 
+## IAM prerequisites
+
+Local runs use your own gcloud identity (Owner is sufficient). For CI runs via `labs-apply.yml`, the deployer SA needs:
+
+```bash
+PROJECT=your-project-id
+SA="serviceAccount:gh-deployer@${PROJECT}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/compute.networkAdmin"         # create VPCs, subnets, VPN gateways, Cloud Router
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/dns.admin"                    # create private DNS zones and forwarding rules
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/serviceusage.serviceUsageAdmin" # enable GCP APIs via google_project_service
+```
+
 ## TODO
 
 - [ ] Two VPCs + Cloud Routers

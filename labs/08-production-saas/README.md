@@ -214,14 +214,15 @@ gcloud projects get-iam-policy $PROJECT_ID \
   --format="table(bindings.role)"
 
 # Required roles for gh-deployer SA:
-#   roles/run.admin
-#   roles/artifactregistry.admin      # create repo, not just push
-#   roles/iam.serviceAccountAdmin     # create runtime SA
-#   roles/iam.serviceAccountUser      # deploy as runtime SA
-#   roles/datastore.owner             # create Firestore DB
-#   roles/storage.objectAdmin         # manage TF state in GCS
-#   roles/secretmanager.admin         # create + version secrets
-#   roles/serviceusage.serviceUsageAdmin  # enable APIs
+#   roles/run.admin                          — create and update Cloud Run services
+#   roles/artifactregistry.admin              — create AR repos (writer only pushes to existing repos)
+#   roles/iam.serviceAccountAdmin             — create the Cloud Run runtime SA
+#   roles/iam.serviceAccountUser              — deploy Cloud Run services as the runtime SA
+#   roles/resourcemanager.projectIamAdmin     — bind roles via google_project_iam_member
+#   roles/datastore.owner                     — create the Firestore (Native) database
+#   roles/storage.objectAdmin                 — read/write tofu state in GCS
+#   roles/secretmanager.admin                 — create and version the edge-auth secret
+#   roles/serviceusage.serviceUsageAdmin      — enable GCP APIs via google_project_service
 ```
 
 ### Step A — Configure GitHub repo and secrets

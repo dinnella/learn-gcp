@@ -34,6 +34,36 @@ synthetic publisher → Pub/Sub topic → Dataflow streaming job (Google templat
 6. **Pub/Sub-to-BigQuery direct subscription** (no Dataflow) exists for simple passthrough — cheaper. Use Dataflow when you need transformation/enrichment.
 7. **Dataflow SQL** + **BigQuery scheduled queries** are competing patterns for simple ETL — exam may ask which is most cost-effective.
 
+## IAM prerequisites
+
+Local runs use your own gcloud identity (Owner is sufficient). For CI runs via `labs-apply.yml`, the deployer SA needs:
+
+```bash
+PROJECT=your-project-id
+SA="serviceAccount:gh-deployer@${PROJECT}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/bigquery.admin"                # create datasets, tables, and scheduled queries
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/dataflow.admin"               # create Dataflow jobs and staging GCS paths
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/pubsub.admin"                 # create Pub/Sub topics and subscriptions
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/storage.admin"                # create GCS buckets for Dataflow staging
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/iam.serviceAccountAdmin"      # create Dataflow worker service account
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/resourcemanager.projectIamAdmin" # bind worker SA roles via google_project_iam_member
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/serviceusage.serviceUsageAdmin" # enable GCP APIs via google_project_service
+```
+
 ## TODO
 
 - [ ] Pub/Sub topic + schema (Avro)

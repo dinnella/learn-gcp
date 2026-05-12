@@ -41,6 +41,33 @@ You'll learn three of the most-tested DevOps concepts:
 5. **Artifact Registry replaced Container Registry.** GCR redirects but is read-only as of 2025 — always create AR repos for new work.
 6. **Direct Workload Identity Federation** (used in this repo) avoids the SA-impersonation hop. The federated principal `principalSet://...attribute.repository/owner/name` gets IAM directly.
 
+## IAM prerequisites
+
+Local runs use your own gcloud identity (Owner is sufficient). For CI runs via `labs-apply.yml`, the deployer SA needs:
+
+```bash
+PROJECT=your-project-id
+SA="serviceAccount:gh-deployer@${PROJECT}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/run.admin"                     # create and manage Cloud Run services
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/artifactregistry.admin"        # create AR repos and push images (writer can only push to existing repos)
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/iam.serviceAccountAdmin"       # create runtime service accounts for Cloud Run
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/iam.serviceAccountUser"        # deploy Cloud Run services as the runtime SA
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/resourcemanager.projectIamAdmin" # bind IAM roles via google_project_iam_member
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/serviceusage.serviceUsageAdmin" # enable GCP APIs via google_project_service
+```
+
 ## Run
 
 This lab will be built incrementally:
