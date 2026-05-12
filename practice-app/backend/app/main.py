@@ -253,7 +253,25 @@ _STATIC_DIR = Path(__file__).parent / "static"
 
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(_STATIC_DIR / "index.html")
+    return FileResponse(
+        _STATIC_DIR / "index.html",
+        headers={"Cache-Control": "no-cache, must-revalidate"},
+    )
 
 
-app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+class NoCacheStaticFiles(StaticFiles):
+    """StaticFiles that adds Cache-Control: no-cache so Cloudflare/browsers
+    always revalidate JS and CSS after a new deploy."""
+
+    async def __call__(self, scope, receive, send) -> None:  # type: ignore[override]
+        async def patched_send(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"cache-control", b"no-cache, must-revalidate"))
+                message["headers"] = headers
+            await send(message)
+
+        await super().__call__(scope, receive, patched_send)
+
+
+app.mount("/static", NoCacheStaticFiles(directory=_STATIC_DIR), name="static")
