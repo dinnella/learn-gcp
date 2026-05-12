@@ -31,7 +31,7 @@ jobs:
     outputs:
       labs: ${{ steps.changes.outputs.labs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
           persist-credentials: false
@@ -64,7 +64,7 @@ jobs:
       run:
         working-directory: ${{ matrix.lab }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
 
