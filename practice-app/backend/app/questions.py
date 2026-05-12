@@ -1,11 +1,4 @@
-"""Question loading + lookup.
-
-In dev, questions are loaded from the seed JSON file into the Firestore
-emulator on demand (via `make seed`). In prod, the same JSON is uploaded
-to GCS and loaded into Firestore by a one-shot job — see infra/seed_job.
-
-Read paths use only Firestore so dev and prod behave identically.
-"""
+"""Question loading + lookup with difficulty + section filters."""
 from __future__ import annotations
 
 import random
@@ -18,6 +11,7 @@ from .models import Question
 def _doc_to_question(doc) -> Question:
     data = doc.to_dict()
     data["id"] = doc.id
+    data.pop("correct_index", None)  # never expose
     return Question(**data)
 
 
@@ -29,15 +23,42 @@ def list_sections(exam: str) -> list[str]:
     return sorted(sections)
 
 
-def sample_question_ids(
-    exam: str, n: int, sections: Iterable[str] | None = None
-) -> list[str]:
-    """Pick `n` random question IDs for the requested exam (and optional sections)."""
+def list_difficulties(exam: str) -> dict[str, int]:
     db = get_db()
-    q = db.collection(QUESTIONS).where("exam", "==", exam)
-    if sections:
-        q = q.where("section", "in", list(sections)[:30])  # Firestore `in` cap
-    docs = list(q.stream())
+    counts: dict[str, int] = {"easy": 0, "medium": 0, "hard": 0}
+    for d in db.collection(QUESTIONS).where("exam", "==", exam).stream():
+        diff = d.to_dict().get("difficulty", "medium")
+        counts[diff] = counts.get(diff, 0) + 1
+    return counts
+
+
+def sample_question_ids(
+    exam: str,
+    n: int,
+    sections: Iterable[str] | None = None,
+    difficulties: Iterable[str] | None = None,
+) -> list[str]:
+    """Pick `n` random question IDs matching the filters.
+
+    Filtering is done client-side after a single exam-scoped query because
+    Firestore composite indexes aren't pre-created in the emulator and the
+    dataset is small (<10k questions in the foreseeable future).
+    """
+    db = get_db()
+    docs = list(db.collection(QUESTIONS).where("exam", "==", exam).stream())
+
+    sec_set = set(sections) if sections else None
+    diff_set = set(difficulties) if difficulties else None
+
+    def keep(d) -> bool:
+        data = d.to_dict()
+        if sec_set and data.get("section") not in sec_set:
+            return False
+        if diff_set and data.get("difficulty", "medium") not in diff_set:
+            return False
+        return True
+
+    docs = [d for d in docs if keep(d)]
     if not docs:
         return []
     if len(docs) <= n:
@@ -53,9 +74,16 @@ def get_question(qid: str) -> Question | None:
     return _doc_to_question(snap)
 
 
-def get_question_correct_index(qid: str) -> int | None:
-    """Hidden lookup of the correct answer (used by /answer endpoint)."""
+def get_question_full(qid: str) -> dict | None:
+    """Returns the full document including correct_index. Server-side only."""
     snap = get_db().collection(QUESTIONS).document(qid).get()
     if not snap.exists:
         return None
-    return snap.to_dict().get("correct_index")
+    data = snap.to_dict()
+    data["id"] = snap.id
+    return data
+
+
+def get_question_correct_index(qid: str) -> int | None:
+    full = get_question_full(qid)
+    return full["correct_index"] if full else None

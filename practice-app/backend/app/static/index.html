@@ -3,48 +3,66 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GCP Cert Practice Tests</title>
+    <title>GCP Cert Practice — Game Mode</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <header>
-      <h1>GCP Cert Practice Tests</h1>
-      <span id="env-badge" class="badge"></span>
+      <h1>GCP Cert Practice <span class="tag">game mode</span></h1>
+      <nav>
+        <button class="navbtn" data-screen="start-screen">New session</button>
+        <button class="navbtn" data-screen="leaderboard-screen">Leaderboard</button>
+        <span id="env-badge" class="badge"></span>
+      </nav>
     </header>
 
     <main id="app">
-      <!-- ---------- start screen ---------- -->
+      <!-- ---------- start ---------- -->
       <section id="start-screen" class="card">
         <h2>Start a session</h2>
-        <p>Pick an exam and a target length. Answer order is randomized per session.</p>
-
         <form id="start-form">
-          <label>
-            Exam
-            <select id="exam">
-              <option value="pca">Professional Cloud Architect</option>
-              <option value="devops">Professional Cloud DevOps Engineer</option>
-            </select>
-          </label>
-
-          <label>
-            Number of questions
-            <input id="num" type="number" min="1" max="50" value="10" />
-          </label>
+          <div class="row">
+            <label>
+              Exam
+              <select id="exam">
+                <option value="pca">Professional Cloud Architect</option>
+                <option value="devops">Professional Cloud DevOps Engineer</option>
+              </select>
+            </label>
+            <label>
+              Player name <span class="muted">(for the leaderboard)</span>
+              <input id="player-name" type="text" maxlength="32" placeholder="e.g. dinnella" />
+            </label>
+            <label>
+              # of questions
+              <input id="num" type="number" min="1" max="50" value="10" />
+            </label>
+          </div>
 
           <fieldset>
-            <legend>Sections (optional — leave empty for all)</legend>
+            <legend>Difficulty</legend>
+            <div class="chips" id="difficulty-chips">
+              <label class="chip"><input type="checkbox" value="easy" /> easy <span class="ct" data-diff="easy">0</span></label>
+              <label class="chip"><input type="checkbox" value="medium" checked /> medium <span class="ct" data-diff="medium">0</span></label>
+              <label class="chip"><input type="checkbox" value="hard" checked /> hard <span class="ct" data-diff="hard">0</span></label>
+            </div>
+            <p class="muted small">Leave all unchecked for any difficulty.</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>Sections <span class="muted">(optional)</span></legend>
             <div id="sections-list" class="checks"></div>
           </fieldset>
 
-          <button type="submit" id="start-btn">Start</button>
+          <button type="submit" id="start-btn">Start →</button>
         </form>
       </section>
 
-      <!-- ---------- quiz screen ---------- -->
+      <!-- ---------- quiz ---------- -->
       <section id="quiz-screen" class="card hidden">
         <div class="progress">
           <span id="progress-text">Question 1</span>
+          <span id="difficulty-badge" class="diff-badge"></span>
           <div class="bar"><div id="progress-fill"></div></div>
         </div>
 
@@ -53,7 +71,7 @@
         <ol id="q-options" class="options"></ol>
 
         <fieldset class="confidence">
-          <legend>Confidence (helps the diagnostic plan):</legend>
+          <legend>Confidence:</legend>
           <label><input type="radio" name="confidence" value="confident" checked /> Confident</label>
           <label><input type="radio" name="confidence" value="narrowed" /> Narrowed to 2</label>
           <label><input type="radio" name="confidence" value="guess" /> Pure guess</label>
@@ -61,24 +79,69 @@
 
         <button id="submit-btn" disabled>Submit answer</button>
 
-        <!-- explanation, shown after answer submission -->
         <div id="explanation" class="hidden">
           <p id="verdict"></p>
           <p id="explain-text"></p>
-          <button id="next-btn">Next</button>
+          <div id="answer-doc-links" class="doc-links"></div>
+          <button id="next-btn">Next →</button>
         </div>
       </section>
 
-      <!-- ---------- results screen ---------- -->
+      <!-- ---------- results / report card ---------- -->
       <section id="results-screen" class="card hidden">
-        <h2>Results</h2>
-        <p>Score: <strong id="r-score"></strong></p>
+        <div class="results-header">
+          <div>
+            <h2>Report card</h2>
+            <p class="muted" id="r-meta"></p>
+          </div>
+          <div class="grade-block">
+            <div id="r-grade" class="grade">—</div>
+            <div id="r-passed" class="pass-pill"></div>
+          </div>
+        </div>
+
+        <div class="score-row">
+          <div class="score-stat"><div class="lbl">Score</div><div id="r-score" class="val">—</div></div>
+          <div class="score-stat"><div class="lbl">Easy</div><div id="r-easy" class="val">—</div></div>
+          <div class="score-stat"><div class="lbl">Medium</div><div id="r-medium" class="val">—</div></div>
+          <div class="score-stat"><div class="lbl">Hard</div><div id="r-hard" class="val">—</div></div>
+        </div>
+
         <h3>By section</h3>
         <table id="r-sections">
-          <thead><tr><th>Section</th><th>Score</th><th>Bar</th></tr></thead>
+          <thead><tr><th>Section</th><th>Score</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
-        <button id="restart-btn">Start another session</button>
+
+        <h3>Recommendations</h3>
+        <div id="r-recs"></div>
+
+        <div id="next-suggestion" class="next-suggestion">
+          <p id="next-prompt"></p>
+          <button id="next-session-btn">Start that session</button>
+          <button class="ghost" id="restart-btn">New session (custom)</button>
+        </div>
+
+        <h3>Save your score</h3>
+        <div id="score-submit-block">
+          <input id="score-name" type="text" maxlength="32" placeholder="Player name" />
+          <button id="submit-score-btn">Save to leaderboard</button>
+          <p id="score-submit-msg" class="muted small"></p>
+        </div>
+      </section>
+
+      <!-- ---------- leaderboard ---------- -->
+      <section id="leaderboard-screen" class="card hidden">
+        <h2>High scores</h2>
+        <div class="tabs">
+          <button class="tab active" data-exam="pca">PCA</button>
+          <button class="tab" data-exam="devops">DevOps</button>
+        </div>
+        <table id="lb-table">
+          <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Mix</th><th>When</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p id="lb-empty" class="muted hidden">No scores yet — be the first.</p>
       </section>
     </main>
 

@@ -22,3 +22,4 @@ def get_db() -> firestore.Client:
 # Collection names — single source of truth.
 QUESTIONS = "questions"
 SESSIONS = "sessions"
+SCORES = "scores"
