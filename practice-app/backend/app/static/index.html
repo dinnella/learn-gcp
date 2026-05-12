@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GCP Cert Practice Tests</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>GCP Cert Practice Tests</h1>
+      <span id="env-badge" class="badge"></span>
+    </header>
+
+    <main id="app">
+      <!-- ---------- start screen ---------- -->
+      <section id="start-screen" class="card">
+        <h2>Start a session</h2>
+        <p>Pick an exam and a target length. Answer order is randomized per session.</p>
+
+        <form id="start-form">
+          <label>
+            Exam
+            <select id="exam">
+              <option value="pca">Professional Cloud Architect</option>
+              <option value="devops">Professional Cloud DevOps Engineer</option>
+            </select>
+          </label>
+
+          <label>
+            Number of questions
+            <input id="num" type="number" min="1" max="50" value="10" />
+          </label>
+
+          <fieldset>
+            <legend>Sections (optional — leave empty for all)</legend>
+            <div id="sections-list" class="checks"></div>
+          </fieldset>
+
+          <button type="submit" id="start-btn">Start</button>
+        </form>
+      </section>
+
+      <!-- ---------- quiz screen ---------- -->
+      <section id="quiz-screen" class="card hidden">
+        <div class="progress">
+          <span id="progress-text">Question 1</span>
+          <div class="bar"><div id="progress-fill"></div></div>
+        </div>
+
+        <p class="section-tag" id="q-section"></p>
+        <h2 id="q-text"></h2>
+        <ol id="q-options" class="options"></ol>
+
+        <fieldset class="confidence">
+          <legend>Confidence (helps the diagnostic plan):</legend>
+          <label><input type="radio" name="confidence" value="confident" checked /> Confident</label>
+          <label><input type="radio" name="confidence" value="narrowed" /> Narrowed to 2</label>
+          <label><input type="radio" name="confidence" value="guess" /> Pure guess</label>
+        </fieldset>
+
+        <button id="submit-btn" disabled>Submit answer</button>
+
+        <!-- explanation, shown after answer submission -->
+        <div id="explanation" class="hidden">
+          <p id="verdict"></p>
+          <p id="explain-text"></p>
+          <button id="next-btn">Next</button>
+        </div>
+      </section>
+
+      <!-- ---------- results screen ---------- -->
+      <section id="results-screen" class="card hidden">
+        <h2>Results</h2>
+        <p>Score: <strong id="r-score"></strong></p>
+        <h3>By section</h3>
+        <table id="r-sections">
+          <thead><tr><th>Section</th><th>Score</th><th>Bar</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button id="restart-btn">Start another session</button>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

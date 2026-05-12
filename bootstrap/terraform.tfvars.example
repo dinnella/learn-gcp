@@ -1,0 +1,4 @@
+project_id          = "learn-gcp-XXXXXX"
+region              = "us-central1"
+tfstate_bucket_name = "tfstate-learn-gcp-XXXXXX" # must be globally unique
+github_repo         = "your-github-username/learn-gcp"

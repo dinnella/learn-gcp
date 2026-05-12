@@ -1,0 +1,65 @@
+# docker-compose for fully-local GCP-emulated dev.
+# Usage: `make up` (or `docker compose up --build`)
+#
+# Each service uses the *same client libraries* the production code uses.
+# The emulators are detected by the libraries via standard env vars.
+
+services:
+  # Cloud Firestore in Native mode — official Google emulator,
+  # bundled in the cloud-cli image. No GCP credentials required.
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: practice-firestore
+    command: >
+      gcloud emulators firestore start
+        --host-port=0.0.0.0:8085
+        --database-mode=firestore-native
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085 >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Object storage emulator (Cloud Storage). Used for the question-bank
+  # blob in production; in local dev it's optional but kept here so the
+  # code path is identical to prod.
+  fake-gcs:
+    image: fsouza/fake-gcs-server:latest
+    container_name: practice-gcs
+    command: -scheme http -port 4443 -external-url http://fake-gcs:4443 -public-host fake-gcs:4443
+    ports:
+      - "4443:4443"
+
+  app:
+    build:
+      context: ./backend
+      target: dev
+    container_name: practice-app
+    depends_on:
+      firestore:
+        condition: service_healthy
+    environment:
+      # Standard Google client-library env vars — these alone redirect all
+      # API calls to the emulators.
+      FIRESTORE_EMULATOR_HOST: firestore:8085
+      STORAGE_EMULATOR_HOST: http://fake-gcs:4443
+      # Required by Firestore client even in emulator mode.
+      GOOGLE_CLOUD_PROJECT: local-dev
+      # App config
+      APP_ENV: dev
+      APP_LOG_LEVEL: DEBUG
+      QUESTION_BANK_SOURCE: seed   # 'seed' = load from JSON; 'gcs' = read from bucket
+    volumes:
+      # Mount source for hot-reload during local dev.
+      - ./backend/app:/srv/app
+      - ./backend/seed:/srv/seed
+    ports:
+      - "8080:8080"
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8080
+        --reload
+        --reload-dir /srv/app

@@ -1,0 +1,86 @@
+name: practice-app — build, deploy, seed
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'practice-app/**'
+      - '.github/workflows/practice-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: us-central1
+  AR_REPO: apps
+  IMAGE: practice-app
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: '1.8.5'
+          tofu_wrapper: false
+
+      # 1) Bootstrap infra (Firestore + AR + initial Cloud Run with hello image).
+      #    Idempotent — safe to run every time.
+      - name: tofu init (infra)
+        working-directory: practice-app/infra
+        run: |
+          tofu init \
+            -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
+            -backend-config="prefix=practice-app"
+
+      - name: tofu apply (bootstrap if needed)
+        working-directory: practice-app/infra
+        run: tofu apply -auto-approve -var "project_id=${{ vars.GCP_PROJECT_ID }}"
+
+      # 2) Build & push the container image to Artifact Registry.
+      - name: Configure docker for AR
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push image
+        working-directory: practice-app/backend
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE }}:${{ github.sha }}"
+          docker build --target runtime -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
+          echo "IMAGE_URI=$IMAGE_URI" >> "$GITHUB_ENV"
+
+      # 3) Re-apply infra with the new image tag — Cloud Run rolls forward atomically.
+      - name: tofu apply (deploy new revision)
+        working-directory: practice-app/infra
+        run: |
+          tofu apply -auto-approve \
+            -var "project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var "image_tag=${{ github.sha }}"
+
+      # 4) Seed Firestore (idempotent — overwrites by document ID).
+      - name: Install seeder deps
+        run: pip install --quiet google-cloud-firestore==2.19.0
+
+      - name: Seed questions
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+        working-directory: practice-app
+        run: python -m backend.app.seed_emulator || python backend/app/seed_emulator.py
+
+      - name: Print service URL
+        working-directory: practice-app/infra
+        run: |
+          echo "::notice title=Practice App URL::$(tofu output -raw service_url)"

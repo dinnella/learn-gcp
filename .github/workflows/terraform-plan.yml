@@ -1,0 +1,92 @@
+name: OpenTofu Plan
+
+on:
+  pull_request:
+    paths:
+      - 'labs/**'
+      - '.github/workflows/terraform-*.yml'
+
+permissions:
+  contents: read
+  id-token: write       # required for WIF
+  pull-requests: write  # required to comment plan output
+
+jobs:
+  detect-labs:
+    runs-on: ubuntu-latest
+    outputs:
+      labs: ${{ steps.changes.outputs.labs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: changes
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          changed=$(git diff --name-only "$base" "$head" | grep -E '^labs/[^/]+/' | awk -F/ '{print $1"/"$2}' | sort -u)
+          if [ -z "$changed" ]; then
+            echo 'labs=[]' >> "$GITHUB_OUTPUT"
+          else
+            echo "labs=$(echo "$changed" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Detected labs:" $changed
+
+  plan:
+    needs: detect-labs
+    if: needs.detect-labs.outputs.labs != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lab: ${{ fromJson(needs.detect-labs.outputs.labs) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.lab }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: '1.8.5'
+          tofu_wrapper: false
+
+      - name: tofu fmt
+        run: tofu fmt -check -recursive
+
+      - name: tofu init
+        run: |
+          tofu init \
+            -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
+            -backend-config="prefix=${{ matrix.lab }}"
+
+      - name: tofu validate
+        run: tofu validate
+
+      - name: tofu plan
+        id: plan
+        run: |
+          tofu plan -no-color -out=tfplan -var "project_id=${{ vars.GCP_PROJECT_ID }}" | tee plan.txt
+
+      - name: Comment plan on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('${{ matrix.lab }}/plan.txt', 'utf8');
+            const truncated = plan.length > 60000 ? plan.slice(0, 60000) + '\n... (truncated)' : plan;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### \`tofu plan\` — \`${{ matrix.lab }}\`\n\n<details><summary>Click to expand</summary>\n\n\`\`\`hcl\n${truncated}\n\`\`\`\n\n</details>`
+            });

@@ -1,0 +1,80 @@
+name: OpenTofu Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'labs/**'
+      - '.github/workflows/terraform-*.yml'
+  workflow_dispatch:
+    inputs:
+      lab:
+        description: 'Lab path (e.g. labs/02-cloud-run-cicd)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  detect-labs:
+    runs-on: ubuntu-latest
+    outputs:
+      labs: ${{ steps.changes.outputs.labs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: changes
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo 'labs=["${{ inputs.lab }}"]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only HEAD^ HEAD | grep -E '^labs/[^/]+/' | awk -F/ '{print $1"/"$2}' | sort -u)
+          if [ -z "$changed" ]; then
+            echo 'labs=[]' >> "$GITHUB_OUTPUT"
+          else
+            echo "labs=$(echo "$changed" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+          fi
+
+  apply:
+    needs: detect-labs
+    if: needs.detect-labs.outputs.labs != '[]'
+    runs-on: ubuntu-latest
+    # Require a manual approval gate — set up environment 'production' in repo settings.
+    environment: production
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        lab: ${{ fromJson(needs.detect-labs.outputs.labs) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.lab }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: '1.8.5'
+          tofu_wrapper: false
+
+      - name: tofu init
+        run: |
+          tofu init \
+            -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
+            -backend-config="prefix=${{ matrix.lab }}"
+
+      - name: tofu apply
+        run: tofu apply -auto-approve -var "project_id=${{ vars.GCP_PROJECT_ID }}"
