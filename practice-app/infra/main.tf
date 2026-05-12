@@ -4,6 +4,8 @@ locals {
     "artifactregistry.googleapis.com",
     "firestore.googleapis.com",
     "iam.googleapis.com",
+    "iamcredentials.googleapis.com",      # required for Workload Identity Federation
+    "cloudresourcemanager.googleapis.com", # required by the Google provider
     "compute.googleapis.com",
     "certificatemanager.googleapis.com",
     "containerscanning.googleapis.com",
