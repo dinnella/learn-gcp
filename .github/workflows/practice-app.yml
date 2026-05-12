@@ -177,12 +177,7 @@ jobs:
           TF_VAR_hostname: ${{ vars.PUBLIC_DOMAIN }}
           TF_VAR_origin_hostname: ${{ steps.gcp_out.outputs.service_hostname }}
         run: |
-          # Drop zone_settings_override from state before every apply.
-          # On destroy, the Cloudflare provider tries to restore ALL initial_settings
-          # (including read-only ones like prefetch_preload, origin_error_page_pass_thru)
-          # and errors out. Removing from state forces a CREATE each run (no destroy path),
-          # which is safe because zone settings are a zone-level singleton in Cloudflare.
-          tofu state rm cloudflare_zone_settings_override.tls 2>/dev/null || true
+
           tofu apply -auto-approve
 
       - name: Print public URL

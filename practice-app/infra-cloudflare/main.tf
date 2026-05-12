@@ -28,17 +28,45 @@ resource "cloudflare_record" "app" {
 }
 
 # ----- Zone-wide TLS hardening -----
-resource "cloudflare_zone_settings_override" "tls" {
-  zone_id = local.zone_id
-  settings {
-    ssl                      = "strict" # Full (strict): origin must present a valid cert (Cloud Run does)
-    always_use_https         = "on"
-    automatic_https_rewrites = "on"
-    min_tls_version          = "1.2"
-    tls_1_3                  = "on"
-    opportunistic_encryption = "on"
-    browser_check            = "on"
-  }
+# Use individual cloudflare_zone_setting resources rather than
+# cloudflare_zone_settings_override. The override captures ALL initial_settings
+# on first apply and tries to restore every one on destroy — including read-only
+# settings (prefetch_preload, origin_error_page_pass_thru, etc.) that error out
+# on Free plan. Individual resources only touch their own setting on destroy.
+resource "cloudflare_zone_setting" "ssl" {
+  zone_id    = local.zone_id
+  setting_id = "ssl"
+  value      = "strict" # Full (strict): Cloud Run presents a valid cert
+}
+resource "cloudflare_zone_setting" "always_use_https" {
+  zone_id    = local.zone_id
+  setting_id = "always_use_https"
+  value      = "on"
+}
+resource "cloudflare_zone_setting" "automatic_https_rewrites" {
+  zone_id    = local.zone_id
+  setting_id = "automatic_https_rewrites"
+  value      = "on"
+}
+resource "cloudflare_zone_setting" "min_tls_version" {
+  zone_id    = local.zone_id
+  setting_id = "min_tls_version"
+  value      = "1.2"
+}
+resource "cloudflare_zone_setting" "tls_1_3" {
+  zone_id    = local.zone_id
+  setting_id = "tls_1_3"
+  value      = "zrt" # 0-RTT + TLS 1.3
+}
+resource "cloudflare_zone_setting" "opportunistic_encryption" {
+  zone_id    = local.zone_id
+  setting_id = "opportunistic_encryption"
+  value      = "on"
+}
+resource "cloudflare_zone_setting" "browser_check" {
+  zone_id    = local.zone_id
+  setting_id = "browser_check"
+  value      = "on"
 }
 
 # ----- Transform Rule: inject X-Edge-Auth on every request to our hostname -----
