@@ -79,13 +79,21 @@ async function loadExamMeta(exam) {
   const ex = _examCache.exams.find((e) => e.id === exam);
   if (!ex) return;
 
-  // Topics checklist (advanced panel) — section is now {id, title}.
+  // Topics tile grid (advanced panel) — section is now {id, title}.
   const list = $("sections-list");
   list.innerHTML = "";
   for (const sec of ex.sections) {
-    const wrap = document.createElement("label");
-    wrap.innerHTML = `<input type="checkbox" value="${sec.id}" /> ${sec.title}`;
-    list.appendChild(wrap);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sec-tile";
+    btn.dataset.id = sec.id;
+    btn.dataset.selected = "false";
+    btn.textContent = sec.title;
+    btn.addEventListener("click", () => {
+      const on = btn.dataset.selected === "true";
+      btn.dataset.selected = on ? "false" : "true";
+    });
+    list.appendChild(btn);
   }
 
   // Difficulty counts
@@ -103,8 +111,8 @@ function readDifficulties() {
 }
 function readSections() {
   return Array.from(
-    document.querySelectorAll('#sections-list input:checked')
-  ).map((el) => el.value);
+    document.querySelectorAll('#sections-list .sec-tile[data-selected="true"]')
+  ).map((el) => el.dataset.id);
 }
 
 function onQuickStart() {
