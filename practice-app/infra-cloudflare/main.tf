@@ -1,6 +1,7 @@
 # Cloudflare edge for Next3k LevelUp.
 # DNS (proxied) → Transform Rule injecting X-Edge-Auth → Cloud Run origin.
-# WAF (managed ruleset) + per-IP rate limit + zone TLS settings, all on Free plan.
+# Per-IP rate limit + zone TLS settings, all on Free plan.
+# Note: Cloudflare Managed Ruleset (WAF) requires a paid plan — not included.
 
 # ----- Zone lookup by name (avoids hardcoding the zone ID) -----
 # The token only needs to be able to list zones (read) + write to the target zone.
@@ -65,25 +66,6 @@ resource "cloudflare_ruleset" "edge_auth" {
   }
 }
 
-# ----- WAF: enable Cloudflare Managed Ruleset (free) -----
-resource "cloudflare_ruleset" "waf_managed" {
-  zone_id     = local.zone_id
-  name        = "waf-managed"
-  description = "Enable Cloudflare Managed Ruleset on ${var.hostname}."
-  kind        = "zone"
-  phase       = "http_request_firewall_managed"
-
-  rules {
-    enabled     = true
-    description = "Cloudflare Managed Ruleset"
-    expression  = "(http.host eq \"${var.hostname}\")"
-    action      = "execute"
-    action_parameters {
-      id = "efb7b8c949ac4650a09736fc376e9aee" # Cloudflare Managed Ruleset (stable global ID)
-    }
-  }
-}
-
 # ----- Per-IP rate limit (Free plan: 1 rule allowed per zone) -----
 resource "cloudflare_ruleset" "rate_limit" {
   zone_id     = local.zone_id
@@ -98,7 +80,8 @@ resource "cloudflare_ruleset" "rate_limit" {
     expression  = "(http.host eq \"${var.hostname}\")"
     action      = "block"
     ratelimit {
-      characteristics     = ["ip.src"]
+      # cf.colo.id is required: Cloudflare counts requests per colo, not globally.
+      characteristics     = ["cf.colo.id", "ip.src"]
       period              = 60
       requests_per_period = var.rate_limit_rpm
       mitigation_timeout  = 60
