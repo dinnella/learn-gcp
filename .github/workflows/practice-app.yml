@@ -170,8 +170,21 @@ jobs:
           BUCKET: ${{ vars.GCP_TFSTATE_BUCKET }}
         run: |
           STATE="gs://${BUCKET}/practice-app-cloudflare/default.tfstate"
-          gsutil cp "$STATE" /tmp/cf.tfstate 2>/dev/null || exit 0
+          echo "Looking for state at: $STATE"
+          echo "--- GCS prefix contents ---"
+          gsutil ls "gs://${BUCKET}/practice-app-cloudflare/" 2>&1 || echo "(prefix empty or not found)"
+
+          if ! gsutil ls "$STATE" >/dev/null 2>&1; then
+            echo "State file not found — skipping migration."
+            exit 0
+          fi
+
+          gsutil cp "$STATE" /tmp/cf.tfstate
+          echo "Downloaded state. Resource types present:"
+          jq '[.resources[].type] | unique' /tmp/cf.tfstate
+
           if jq -e '.resources[] | select(.type == "cloudflare_record" or .type == "cloudflare_zone_settings_override")' /tmp/cf.tfstate >/dev/null 2>&1; then
+            echo "Found v4 resource types — migrating..."
             jq '
               .serial += 1 |
               .resources |= map(
@@ -179,10 +192,12 @@ jobs:
               ) |
               .resources |= map(select(.type != "cloudflare_zone_settings_override"))
             ' /tmp/cf.tfstate > /tmp/cf.migrated.tfstate
+            echo "After migration, resource types:"
+            jq '[.resources[].type] | unique' /tmp/cf.migrated.tfstate
             gsutil cp /tmp/cf.migrated.tfstate "$STATE"
-            echo "State migrated."
+            echo "State migrated successfully."
           else
-            echo "State already up to date, nothing to migrate."
+            echo "No v4 resources found — already migrated or no migration needed."
           fi
 
       - name: tofu validate (cloudflare)
