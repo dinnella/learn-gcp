@@ -227,6 +227,8 @@ gcloud projects get-iam-policy $PROJECT_ID \
 
 ### Step A — Configure GitHub repo and secrets
 
+[`scripts/setup-github.sh`](../../scripts/setup-github.sh) is a one-time script that configures the GitHub repo for CI deployment. Run it once after `bootstrap/` succeeds:
+
 ```bash
 ./scripts/setup-github.sh
 # Sets: PROJECT_ID, REGION, AR_REPO, IMAGE, SERVICE_NAME, WIF_PROVIDER,

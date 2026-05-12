@@ -17,8 +17,9 @@ After running `bootstrap/`, set these in **Settings → Secrets and variables �
 
 | File | Trigger | Action |
 |---|---|---|
-| [terraform-plan.yml](terraform-plan.yml) | Pull request changing `labs/**` | `tofu plan` for each changed lab; comments diff on PR |
-| [terraform-apply.yml](terraform-apply.yml) | Push to `main` changing `labs/**` | `tofu apply` for each changed lab |
+| [labs-plan.yml](labs-plan.yml) | Pull request changing `labs/**` | `tofu plan` for each changed lab; comments diff on PR |
+| [labs-apply.yml](labs-apply.yml) | Push to `main` changing `labs/**` | `tofu apply` for each changed lab |
+| [practice-app.yml](practice-app.yml) | Push to `main` changing `practice-app/**` | Build image → push to Artifact Registry → `tofu apply` → seed Firestore |
 
 ## How auth works (mental model for AWS people)
 
