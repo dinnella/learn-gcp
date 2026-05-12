@@ -5,19 +5,16 @@
 
 # ----- Zone lookup by name (avoids hardcoding the zone ID) -----
 # The token only needs to be able to list zones (read) + write to the target zone.
-# Use zones[0].id (not .id) per https://developers.cloudflare.com/terraform/troubleshooting/authentication-error-dns-records/
 data "cloudflare_zones" "this" {
-  filter {
-    name = var.zone_name
-  }
+  name = var.zone_name
 }
 
 locals {
-  zone_id = data.cloudflare_zones.this.zones[0].id
+  zone_id = data.cloudflare_zones.this.result[0].id
 }
 
 # ----- DNS: proxied CNAME so Cloudflare actually fronts the traffic -----
-resource "cloudflare_record" "app" {
+resource "cloudflare_dns_record" "app" {
   zone_id = local.zone_id
   name    = var.hostname
   type    = "CNAME"
@@ -79,19 +76,19 @@ resource "cloudflare_ruleset" "edge_auth" {
   kind        = "zone"
   phase       = "http_request_late_transform"
 
-  rules {
+  rules = [{
     enabled     = true
     description = "Inject X-Edge-Auth for ${var.hostname}"
     expression  = "(http.host eq \"${var.hostname}\")"
     action      = "rewrite"
-    action_parameters {
-      headers {
+    action_parameters = {
+      headers = [{
         name      = "X-Edge-Auth"
         operation = "set"
         value     = var.edge_shared_secret
-      }
+      }]
     }
-  }
+  }]
 }
 
 # ----- Per-IP rate limit (Free plan: 1 rule allowed per zone) -----
@@ -102,18 +99,18 @@ resource "cloudflare_ruleset" "rate_limit" {
   kind        = "zone"
   phase       = "http_ratelimit"
 
-  rules {
+  rules = [{
     enabled     = true
-      description = "${var.rate_limit_rp10s} req/10s/IP"
+    description = "${var.rate_limit_rp10s} req/10s/IP"
     expression  = "(http.host eq \"${var.hostname}\")"
     action      = "block"
-    ratelimit {
+    ratelimit = [{
       # cf.colo.id is required: Cloudflare counts requests per colo, not globally.
       characteristics     = ["cf.colo.id", "ip.src"]
       # Free plan only supports period=10 (10-second window).
       period              = 10
       requests_per_period = var.rate_limit_rp10s
       mitigation_timeout  = 60
-    }
-  }
+    }]
+  }]
 }
