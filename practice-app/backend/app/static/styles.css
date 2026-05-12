@@ -408,7 +408,7 @@ th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: u
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .github-nav:hover { color: var(--text); border-color: #3a4256; background: var(--panel-2); }
-.gh-icon { width: 16px; height: 16px; fill: var(--text); flex-shrink: 0; }
+.gh-icon { width: 20px; height: 20px; flex-shrink: 0; display: block; }
 
 /* GitHub hero — post-exam CTA */
 .github-hero {
