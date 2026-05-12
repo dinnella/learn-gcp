@@ -197,6 +197,40 @@ jobs:
             echo "No v4 resources found — skipping."
           fi
 
+      # If a ruleset already exists in the Cloudflare API but is absent from
+      # state (e.g. edge_auth survived a state wipe), apply would POST a second
+      # one and hit error 20217 (max zone rulesets per phase). Import it first.
+      # Safe on every run: "already in state" exits 1, caught by || true.
+      - name: Import orphaned Cloudflare rulesets
+        working-directory: practice-app/infra-cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_edge_shared_secret: ${{ secrets.EDGE_SHARED_SECRET }}
+          TF_VAR_hostname: ${{ vars.PUBLIC_DOMAIN }}
+          TF_VAR_origin_hostname: ${{ steps.gcp_out.outputs.service_hostname }}
+        run: |
+          ZONE_NAME=$(echo "${{ vars.PUBLIC_DOMAIN }}" | awk -F. '{print $(NF-1)"."$NF}')
+          ZONE_ID=$(curl -sS -f -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones?name=$ZONE_NAME" | \
+            jq -r '.result[0].id')
+          RULESETS=$(curl -sS -f -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/rulesets")
+
+          declare -A PHASE_TO_RESOURCE=(
+            [http_request_late_transform]=cloudflare_ruleset.edge_auth
+            [http_ratelimit]=cloudflare_ruleset.rate_limit
+          )
+          for PHASE in "${!PHASE_TO_RESOURCE[@]}"; do
+            RESOURCE="${PHASE_TO_RESOURCE[$PHASE]}"
+            RULESET_ID=$(echo "$RULESETS" | jq -r ".result[]? | select(.phase == \"$PHASE\") | .id // empty")
+            if [ -n "$RULESET_ID" ]; then
+              echo "Importing $RESOURCE ($RULESET_ID) — already in state is OK"
+              tofu import "$RESOURCE" "$ZONE_ID/$RULESET_ID" || true
+            else
+              echo "No existing ruleset for $PHASE — apply will create it."
+            fi
+          done
+
       - name: tofu validate (cloudflare)
         working-directory: practice-app/infra-cloudflare
         run: tofu validate
