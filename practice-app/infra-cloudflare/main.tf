@@ -83,19 +83,35 @@ resource "cloudflare_ruleset" "edge_auth" {
     action      = "rewrite"
     action_parameters = {
       headers = {
-        # Inject auth secret so Cloud Run middleware accepts the request.
         "X-Edge-Auth" = {
           operation = "set"
           value     = var.edge_shared_secret
         }
-        # Rewrite Host to the Cloud Run hostname so Cloud Run's frontend
-        # can route the request. Cloudflare forwards the original Host
-        # (levelup.next3k.com) by default, which Cloud Run doesn't recognise.
-        "Host" = {
-          operation = "set"
-          value     = var.origin_hostname
-        }
       }
+    }
+  }]
+}
+
+# ----- Origin Rule: override Host header so Cloud Run routes the request -----
+# Cloudflare forwards the original Host (levelup.next3k.com) to the origin by
+# default. Cloud Run only knows its *.run.app hostname and returns 404 for
+# anything else. Origin Rules (http_request_origin / route action) are the
+# only Cloudflare mechanism that can override the Host sent to the origin;
+# transform rules explicitly block 'set' on the Host header (error 20087).
+resource "cloudflare_ruleset" "origin_override" {
+  zone_id     = local.zone_id
+  name        = "origin-host-override"
+  description = "Route ${var.hostname} requests to Cloud Run with correct Host header."
+  kind        = "zone"
+  phase       = "http_request_origin"
+
+  rules = [{
+    enabled     = true
+    description = "Override Host → ${var.origin_hostname}"
+    expression  = "(http.host eq \"${var.hostname}\")"
+    action      = "route"
+    action_parameters = {
+      host_header = var.origin_hostname
     }
   }]
 }

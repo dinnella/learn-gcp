@@ -219,6 +219,7 @@ jobs:
           declare -A PHASE_TO_RESOURCE=(
             [http_request_late_transform]=cloudflare_ruleset.edge_auth
             [http_ratelimit]=cloudflare_ruleset.rate_limit
+            [http_request_origin]=cloudflare_ruleset.origin_override
           )
           for PHASE in "${!PHASE_TO_RESOURCE[@]}"; do
             RESOURCE="${PHASE_TO_RESOURCE[$PHASE]}"
