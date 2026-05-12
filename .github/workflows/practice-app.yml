@@ -56,6 +56,10 @@ jobs:
             -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
             -backend-config="prefix=practice-app"
 
+      - name: tofu validate (infra)
+        working-directory: practice-app/infra
+        run: tofu validate
+
       - name: tofu apply (bootstrap if needed)
         working-directory: practice-app/infra
         env:
@@ -158,6 +162,10 @@ jobs:
           tofu init -input=false \
             -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
             -backend-config="prefix=practice-app-cloudflare"
+
+      - name: tofu validate (cloudflare)
+        working-directory: practice-app/infra-cloudflare
+        run: tofu validate
 
       - name: tofu apply (cloudflare)
         working-directory: practice-app/infra-cloudflare

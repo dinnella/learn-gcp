@@ -130,10 +130,12 @@ resource "google_cloud_run_v2_service" "app" {
         value = "INFO"
       }
 
+      # Map-based for_each: Google Cloud Run v2 provider v7 only accepts maps
+      # (not sets or lists) in dynamic block for_each. env.key = var name.
       dynamic "env" {
-        for_each = var.edge_shared_secret == "" ? toset([]) : toset(["set"])
+        for_each = var.edge_shared_secret != "" ? { EDGE_SHARED_SECRET = true } : {}
         content {
-          name = "EDGE_SHARED_SECRET"
+          name = env.key
           value_source {
             secret_key_ref {
               secret  = google_secret_manager_secret.edge_auth[0].secret_id

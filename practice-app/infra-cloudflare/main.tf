@@ -37,22 +37,19 @@ resource "cloudflare_ruleset" "edge_auth" {
   kind        = "zone"
   phase       = "http_request_late_transform"
 
-  rules = [
-    {
-      enabled     = true
-      description = "Inject X-Edge-Auth for ${var.hostname}"
-      expression  = "(http.host eq \"${var.hostname}\")"
-      action      = "rewrite"
-      action_parameters = {
-        headers = {
-          "X-Edge-Auth" = {
-            operation = "set"
-            value     = var.edge_shared_secret
-          }
-        }
+  rules {
+    enabled     = true
+    description = "Inject X-Edge-Auth for ${var.hostname}"
+    expression  = "(http.host eq \"${var.hostname}\")"
+    action      = "rewrite"
+    action_parameters {
+      headers {
+        name      = "X-Edge-Auth"
+        operation = "set"
+        value     = var.edge_shared_secret
       }
-    },
-  ]
+    }
+  }
 }
 
 # ----- WAF: enable Cloudflare Managed Ruleset (free) -----
@@ -63,17 +60,15 @@ resource "cloudflare_ruleset" "waf_managed" {
   kind        = "zone"
   phase       = "http_request_firewall_managed"
 
-  rules = [
-    {
-      enabled     = true
-      description = "Cloudflare Managed Ruleset"
-      expression  = "(http.host eq \"${var.hostname}\")"
-      action      = "execute"
-      action_parameters = {
-        id = "efb7b8c949ac4650a09736fc376e9aee" # Cloudflare Managed Ruleset (stable global ID)
-      }
-    },
-  ]
+  rules {
+    enabled     = true
+    description = "Cloudflare Managed Ruleset"
+    expression  = "(http.host eq \"${var.hostname}\")"
+    action      = "execute"
+    action_parameters {
+      id = "efb7b8c949ac4650a09736fc376e9aee" # Cloudflare Managed Ruleset (stable global ID)
+    }
+  }
 }
 
 # ----- Per-IP rate limit (Free plan: 1 rule allowed per zone) -----
@@ -84,18 +79,16 @@ resource "cloudflare_ruleset" "rate_limit" {
   kind        = "zone"
   phase       = "http_ratelimit"
 
-  rules = [
-    {
-      enabled     = true
-      description = "${var.rate_limit_rpm} req/min/IP"
-      expression  = "(http.host eq \"${var.hostname}\")"
-      action      = "block"
-      ratelimit = {
-        characteristics     = ["ip.src"]
-        period              = 60
-        requests_per_period = var.rate_limit_rpm
-        mitigation_timeout  = 60
-      }
-    },
-  ]
+  rules {
+    enabled     = true
+    description = "${var.rate_limit_rpm} req/min/IP"
+    expression  = "(http.host eq \"${var.hostname}\")"
+    action      = "block"
+    ratelimit {
+      characteristics     = ["ip.src"]
+      period              = 60
+      requests_per_period = var.rate_limit_rpm
+      mitigation_timeout  = 60
+    }
+  }
 }
