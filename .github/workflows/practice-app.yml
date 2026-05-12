@@ -177,19 +177,17 @@ jobs:
 
           if jq -e '.resources[] | select(
                 .type == "cloudflare_record" or
-                .type == "cloudflare_zone_settings_override" or
-                .type == "cloudflare_ruleset"
+                .type == "cloudflare_zone_settings_override"
               )' /tmp/cf.tfstate >/dev/null 2>&1; then
             echo "Found v4 resource types — migrating..."
+            # cloudflare_ruleset is intentionally kept: the type name is the same
+            # in v4 and v5, so v5 can read it and will update in-place (no POST).
             jq '
               .serial += 1 |
               .resources |= map(
                 if .type == "cloudflare_record" then .type = "cloudflare_dns_record" else . end
               ) |
-              .resources |= map(select(
-                .type != "cloudflare_zone_settings_override" and
-                .type != "cloudflare_ruleset"
-              ))
+              .resources |= map(select(.type != "cloudflare_zone_settings_override"))
             ' /tmp/cf.tfstate > /tmp/cf.migrated.tfstate
             echo "After migration:"
             jq '[.resources[].type] | unique' /tmp/cf.migrated.tfstate

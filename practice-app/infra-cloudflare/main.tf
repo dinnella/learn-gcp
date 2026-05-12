@@ -108,10 +108,10 @@ resource "cloudflare_ruleset" "rate_limit" {
     ratelimit = {
       # cf.colo.id is required: Cloudflare counts requests per colo, not globally.
       characteristics     = ["cf.colo.id", "ip.src"]
-      # Free plan only supports period=10 (10-second window).
+      # Free plan: period=10 and mitigation_timeout=10 are the only valid values.
       period              = 10
       requests_per_period = var.rate_limit_rp10s
-      mitigation_timeout  = 60
+      mitigation_timeout  = 10
     }
   }]
 }
