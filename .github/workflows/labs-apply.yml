@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'labs/**'
-      - '.github/workflows/terraform-*.yml'
+      - '.github/workflows/labs-*.yml'
   workflow_dispatch:
     inputs:
       lab:

@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'labs/**'
-      - '.github/workflows/terraform-*.yml'
+      - '.github/workflows/labs-*.yml'
 
 permissions:
   contents: read
