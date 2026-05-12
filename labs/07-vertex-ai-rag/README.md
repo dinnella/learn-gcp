@@ -40,6 +40,36 @@ This is the canonical "Gemini Enterprise" pattern called out in PCA 2.5.
    - Vector Search = bring-your-own embeddings, ANN index.
    - Default exam answer: **Search** unless the question demands custom embeddings.
 
+## IAM prerequisites
+
+Local runs use your own gcloud identity (Owner is sufficient). For CI runs via `labs-apply.yml`, the deployer SA needs:
+
+```bash
+PROJECT=your-project-id
+SA="serviceAccount:gh-deployer@${PROJECT}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/aiplatform.admin"              # create Vertex AI endpoints, index deployments
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/discoveryengine.admin"         # create Discovery Engine (AI Search) data stores
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/storage.admin"                 # create GCS corpus bucket and manage objects
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/run.admin"                     # deploy Cloud Run inference wrapper (if used)
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/iam.serviceAccountAdmin"       # create runtime SA for the inference service
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/resourcemanager.projectIamAdmin" # bind runtime SA roles via google_project_iam_member
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/serviceusage.serviceUsageAdmin" # enable GCP APIs via google_project_service
+```
+
 ## TODO
 
 - [ ] GCS bucket w/ sample PDFs

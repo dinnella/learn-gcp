@@ -181,8 +181,9 @@ fieldset {
 }
 legend { color: var(--muted); padding: 0 0.4rem; font-size: 0.85rem; }
 
-.checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.35rem 1rem; }
-.checks label { color: var(--text); font-size: 0.9rem; margin-bottom: 0; display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; cursor: pointer; }
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.35rem 1rem; }
+.checks label { color: var(--text); font-size: 0.9rem; margin-bottom: 0; display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.2rem 0; cursor: pointer; }
+.checks label input { margin-top: 0.2rem; flex-shrink: 0; }
 .checks label:hover { color: var(--accent); }
 
 .chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -397,4 +398,39 @@ th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: u
   .hero h2 { font-size: 1.5rem; }
   #quick-start-btn { font-size: 1.15rem; padding: 0.9rem 1.6rem; }
   .score-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* GitHub nav link */
+.github-nav {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.github-nav:hover { color: var(--text); border-color: #3a4256; background: var(--panel-2); }
+.gh-icon { width: 16px; height: 16px; fill: currentColor; flex-shrink: 0; }
+
+/* GitHub hero — post-exam CTA */
+.github-hero {
+  margin-top: 1.5rem; padding: 1.1rem 1.25rem;
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: var(--radius); border-left: 4px solid var(--accent-2);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.25rem; flex-wrap: wrap;
+}
+.github-hero-text { flex: 1; min-width: 200px; }
+.github-hero-text strong { font-size: 1rem; display: block; margin-bottom: 0.2rem; }
+.github-hero-text p { margin: 0; }
+.cta-github {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--accent-2); border-radius: var(--radius);
+  padding: 0.65rem 1.25rem; font-size: 0.95rem; font-weight: 600;
+  text-decoration: none; white-space: nowrap; flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.cta-github svg { width: 18px; height: 18px; fill: currentColor; }
+.cta-github:hover {
+  background: rgba(124,77,255,0.12); border-color: #9966ff;
+  box-shadow: 0 0 14px rgba(124,77,255,0.25);
 }

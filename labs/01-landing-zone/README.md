@@ -34,6 +34,33 @@ A single-project landing zone (lab-scoped):
 4. **Org policies** are constraint-based (built-in list), not free-form like Azure Policy. Custom constraints exist but are limited to specific services.
 5. **Default network is created automatically** in new projects — disable via the `compute.skipDefaultNetworkCreation` org policy or `auto_create_subnetworks = false`.
 
+## IAM prerequisites
+
+Local runs use your own gcloud identity (Owner is sufficient). For CI runs via `labs-apply.yml`, the deployer SA needs:
+
+```bash
+PROJECT=your-project-id
+SA="serviceAccount:gh-deployer@${PROJECT}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/compute.networkAdmin"          # create VPC, subnets, hierarchical firewall policies
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/logging.admin"                 # create log sinks and log buckets
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/orgpolicy.policyAdmin"         # apply org policy constraints at project level
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/storage.admin"                 # create GCS bucket for log archive
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/resourcemanager.projectIamAdmin" # bind IAM roles (google_storage_bucket_iam_member)
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/serviceusage.serviceUsageAdmin" # enable GCP APIs via google_project_service
+```
+
 ## Run
 
 Local:

@@ -1,6 +1,7 @@
-variable "zone_id" {
-  description = "Cloudflare zone ID for next3k.com."
+variable "zone_name" {
+  description = "Cloudflare zone apex domain, e.g. next3k.com. Used to look up the zone ID via the API."
   type        = string
+  default     = "next3k.com"
 }
 
 variable "hostname" {
@@ -19,8 +20,13 @@ variable "edge_shared_secret" {
   sensitive   = true
 }
 
-variable "rate_limit_rpm" {
-  description = "Requests per IP per minute before the rate limiter blocks for 60s."
+variable "rate_limit_rp10s" {
+  description = "Requests per IP per 10 seconds before the rate limiter blocks for 60s (Free plan only supports period=10)."
   type        = number
-  default     = 60
+  default     = 10
+}
+
+variable "account_id" {
+  description = "Cloudflare account ID. Required for Workers scripts (account-scoped resource). Find it on the Cloudflare dashboard overview page for the zone."
+  type        = string
 }

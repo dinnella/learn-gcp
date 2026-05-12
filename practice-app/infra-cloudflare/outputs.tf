@@ -1,9 +1,9 @@
 output "fqdn" {
-  value = cloudflare_record.app.hostname
+  value = var.hostname
 }
 
 output "proxied" {
-  value = cloudflare_record.app.proxied
+  value = cloudflare_dns_record.app.proxied
 }
 
 output "public_url" {

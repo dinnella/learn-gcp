@@ -4,6 +4,8 @@ locals {
     "artifactregistry.googleapis.com",
     "firestore.googleapis.com",
     "iam.googleapis.com",
+    "iamcredentials.googleapis.com",      # required for Workload Identity Federation
+    "cloudresourcemanager.googleapis.com", # required by the Google provider
     "compute.googleapis.com",
     "certificatemanager.googleapis.com",
     "containerscanning.googleapis.com",
@@ -79,10 +81,9 @@ resource "google_project_iam_member" "runtime_metrics" {
 }
 
 # ---------- Edge shared secret (Cloudflare → origin) ----------
-# Created/updated only when var.edge_shared_secret is non-empty. Stored in
-# Secret Manager so it never appears in Cloud Run's plain-env config.
+# Secret Manager stores the value; Cloud Run reads it via secret_key_ref.
+# EDGE_SHARED_SECRET is always provided in CI by setup-github.sh.
 resource "google_secret_manager_secret" "edge_auth" {
-  count     = var.edge_shared_secret == "" ? 0 : 1
   secret_id = "${var.service_name}-edge-auth"
   replication {
     auto {}
@@ -91,14 +92,12 @@ resource "google_secret_manager_secret" "edge_auth" {
 }
 
 resource "google_secret_manager_secret_version" "edge_auth" {
-  count       = var.edge_shared_secret == "" ? 0 : 1
-  secret      = google_secret_manager_secret.edge_auth[0].id
+  secret      = google_secret_manager_secret.edge_auth.id
   secret_data = var.edge_shared_secret
 }
 
 resource "google_secret_manager_secret_iam_member" "edge_auth_runtime" {
-  count     = var.edge_shared_secret == "" ? 0 : 1
-  secret_id = google_secret_manager_secret.edge_auth[0].id
+  secret_id = google_secret_manager_secret.edge_auth.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime.email}"
 }
@@ -128,15 +127,14 @@ resource "google_cloud_run_v2_service" "app" {
         value = "INFO"
       }
 
-      dynamic "env" {
-        for_each = var.edge_shared_secret == "" ? [] : [1]
-        content {
-          name = "EDGE_SHARED_SECRET"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.edge_auth[0].secret_id
-              version = "latest"
-            }
+      # Map-based for_each: Google Cloud Run v2 provider v7 only accepts maps
+      # (not sets or lists) in dynamic block for_each. env.key = var name.
+      env {
+        name = "EDGE_SHARED_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.edge_auth.secret_id
+            version = "latest"
           }
         }
       }

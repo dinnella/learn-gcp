@@ -38,6 +38,30 @@ git push image → Cloud Build builds + signs → AR
 5. **Binary Authorization on GKE** is enforced at admission via an admission controller webhook. On Cloud Run it's enforced at deploy time.
 6. **Regional cluster** spans 3 zones automatically; **zonal cluster** is one zone (don't use for prod).
 
+## IAM prerequisites
+
+Local runs use your own gcloud identity (Owner is sufficient). For CI runs via `labs-apply.yml`, the deployer SA needs:
+
+```bash
+PROJECT=your-project-id
+SA="serviceAccount:gh-deployer@${PROJECT}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/container.admin"               # create and manage GKE Autopilot clusters
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/artifactregistry.admin"        # create AR repos for canary images
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/iam.serviceAccountAdmin"       # create node-pool and workload identity SAs
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/resourcemanager.projectIamAdmin" # bind Workload Identity and node SA roles
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/serviceusage.serviceUsageAdmin" # enable GCP APIs via google_project_service
+```
+
 ## TODO
 
 - [ ] Autopilot regional cluster OpenTofu config

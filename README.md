@@ -11,8 +11,10 @@ Hands-on study repo for the [Google Cloud Professional Cloud Architect](professi
 | [docs/diagnostic-exam.md](docs/diagnostic-exam.md) | Pre-study practice exam plan + scoring rubric |
 | [docs/notes/](docs/notes/) | Condensed notes per exam-guide section |
 | [bootstrap/](bootstrap/) | One-time Terraform: TF state bucket + GitHub WIF |
-| [labs/](labs/) | 7 hands-on labs, each self-contained |
-| [.github/workflows/](.github/workflows/) | Reusable plan/apply workflows using WIF |
+| [labs/](labs/) | 8 hands-on labs (01–07 focused topics; 08 production capstone) |
+| [practice-app/](practice-app/) | *Next3k LevelUp* — real FastAPI app deployed to Cloud Run + Firestore (the lab 08 reference implementation) |
+| [scripts/setup-github.sh](scripts/setup-github.sh) | One-time script: sets GitHub repo vars/secrets and branch protection (run once after `bootstrap/`) |
+| [.github/workflows/](.github/workflows/) | CI/CD: labs plan/apply + practice-app build/deploy, all via WIF |
 
 ## Quick start
 

@@ -4,6 +4,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Next3k LevelUp — GCP Cert Practice</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <!-- Social / unfurl meta -->
+    <meta name="description" content="10 scenario questions. Live grading. Real exam topics. Practice for the GCP Professional Cloud Architect and DevOps Engineer certifications. Climb the leaderboard." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://levelup.next3k.com" />
+    <meta property="og:title" content="Next3k LevelUp — GCP Cert Practice" />
+    <meta property="og:description" content="10 scenario questions. Live grading. Real exam topics. PCA + DevOps Engineer. Climb the leaderboard." />
+    <meta property="og:image" content="https://levelup.next3k.com/static/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Next3k LevelUp — GCP Cert Practice" />
+    <meta name="twitter:description" content="10 scenario questions. Live grading. Real exam topics. PCA + DevOps Engineer." />
+    <meta name="twitter:image" content="https://levelup.next3k.com/static/og-image.svg" />
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
@@ -16,6 +30,7 @@
       <nav>
         <button class="navbtn" data-screen="start-screen">🏠 Home</button>
         <button class="navbtn" data-screen="leaderboard-screen">🏆 Leaderboard</button>
+        <a class="navbtn github-nav" href="https://github.com/dinnella/learn-gcp" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub"><svg class="gh-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
         <span id="env-badge" class="badge"></span>
       </nav>
     </header>
@@ -28,7 +43,7 @@
           <div class="hero-body">
             <p class="eyebrow">Ready, player one?</p>
             <h2>Level up your Google Cloud game.</h2>
-            <p class="hero-sub">10 scenario questions. Live grading. Real exam topics. Climb the leaderboard.</p>
+            <p class="hero-sub">10 questions between you and bragging rights. No pressure.</p>
 
             <div class="hero-cta">
               <button id="quick-start-btn" class="cta-primary">▶ Start Playing</button>
@@ -101,17 +116,17 @@
         <fieldset class="confidence">
           <legend>How confident?</legend>
           <label><input type="radio" name="confidence" value="confident" checked /> 💪 Confident</label>
-          <label><input type="radio" name="confidence" value="narrowed" /> 🤔 Down to 2</label>
-          <label><input type="radio" name="confidence" value="guess" /> 🎲 Just guessing</label>
+          <label><input type="radio" name="confidence" value="narrowed" /> 🤔 Down to two</label>
+          <label><input type="radio" name="confidence" value="guess" /> 🎲 Educated guess</label>
         </fieldset>
 
-        <button id="submit-btn" class="cta-primary" disabled>Lock in answer</button>
+        <button id="submit-btn" class="cta-primary" disabled>Lock it in 🔒</button>
 
         <div id="explanation" class="hidden">
           <p id="verdict" class="verdict"></p>
           <p id="explain-text"></p>
           <div id="answer-doc-links" class="doc-links"></div>
-          <button id="next-btn" class="cta-primary">Next question →</button>
+          <button id="next-btn" class="cta-primary">Next →</button>
         </div>
       </section>
 
@@ -159,6 +174,18 @@
           <button id="submit-score-btn" class="cta-primary">Save to leaderboard</button>
           <p id="score-submit-msg" class="muted small"></p>
         </div>
+
+        <div class="github-hero">
+          <div class="github-hero-text">
+            <p class="eyebrow">Open source</p>
+            <strong>Built with this study repo</strong>
+            <p class="muted small">Star the repo, study the labs, ace the cert. In that order, ideally. ⭐</p>
+          </div>
+          <a class="cta-github" href="https://github.com/dinnella/learn-gcp" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            ⭐ Star on GitHub
+          </a>
+        </div>
       </section>
 
       <!-- ---------- leaderboard ---------- -->
@@ -172,7 +199,7 @@
           <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Mix</th><th>When</th></tr></thead>
           <tbody></tbody>
         </table>
-        <p id="lb-empty" class="muted hidden">No scores yet — be the first to set one!</p>
+        <p id="lb-empty" class="muted hidden">No scores yet. Someone has to be first. Don't be shy.</p>
       </section>
     </main>
 

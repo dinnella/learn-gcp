@@ -54,4 +54,4 @@ SECTION_TITLES: dict[str, str] = {
 
 def title_for(section_code: str) -> str:
     """Return a friendly title, falling back to the code itself."""
-    return SECTION_TITLES.get(section_code, section_code)
+    return SECTION_TITLES.get(section_code.upper(), section_code)

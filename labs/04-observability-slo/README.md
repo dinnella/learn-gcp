@@ -37,6 +37,24 @@ End-to-end observability for the lab 02 Cloud Run service:
 6. **Ops Agent** (single agent for logs + metrics) replaces the older Logging + Monitoring agents.
 7. **Managed Service for Prometheus** is the GCP-native way to scrape Prometheus metrics — no node-local Prometheus server needed.
 
+## IAM prerequisites
+
+Local runs use your own gcloud identity (Owner is sufficient). For CI runs via `labs-apply.yml`, the deployer SA needs:
+
+```bash
+PROJECT=your-project-id
+SA="serviceAccount:gh-deployer@${PROJECT}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/logging.admin"                 # create log-based metrics and sinks
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/monitoring.admin"              # create SLOs, alert policies, dashboards
+
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$SA" --condition=None \
+  --role="roles/serviceusage.serviceUsageAdmin" # enable GCP APIs via google_project_service
+```
+
 ## TODO
 
 - [ ] Sample app w/ OpenTelemetry SDK (Python or Go)
