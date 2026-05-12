@@ -273,7 +273,9 @@ async function onSubmitAnswer() {
 
   const verdict = $("verdict");
   if (data.correct) {
-    const flair = state.streak >= 3 ? ` 🔥 ${state.streak}-streak!` : "";
+    const flair = state.streak >= 5 ? ` 🤖 ${state.streak} in a row. Inhuman.`
+                : state.streak >= 3 ? ` 🔥 ${state.streak}-streak.`
+                : "";
     verdict.innerHTML = `✅ <strong>Correct!</strong>${flair}`;
     verdict.className = "verdict correct";
   } else {
@@ -315,8 +317,11 @@ async function renderResults() {
   // Headline reacts to grade.
   const gradeLetter = r.report_card?.overall_grade;
   const headlines = {
-    A: "🏆 Outstanding!", B: "🎉 Strong run!", C: "👍 Solid effort",
-    D: "🧠 Plenty of room to grow", F: "💪 Time to study up",
+    A: "🏆 That's a pass. The cloud acknowledges you.",
+    B: "🎉 Solid. You're dangerous with a bit more practice.",
+    C: "📊 Middle of the road. The exam won't be.",
+    D: "💀 The cloud has spoken. Revisit your notes.",
+    F: "🔥 Rough one. The good news: you can only go up.",
   };
   $("r-headline").textContent = headlines[gradeLetter] || "Run complete";
 
@@ -424,7 +429,7 @@ async function onSubmitScore() {
   }
   state.playerName = name;
   localStorage.setItem("playerName", name);
-  $("score-submit-msg").textContent = "Saved ✓ — switch to the Leaderboard tab to see it.";
+  $("score-submit-msg").textContent = "Saved ✓ — check the leaderboard.";
 }
 
 // ---------- leaderboard ----------
