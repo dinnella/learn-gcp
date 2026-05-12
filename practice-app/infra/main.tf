@@ -131,7 +131,7 @@ resource "google_cloud_run_v2_service" "app" {
       }
 
       dynamic "env" {
-        for_each = var.edge_shared_secret == "" ? [] : ["set"]
+        for_each = var.edge_shared_secret == "" ? toset([]) : toset(["set"])
         content {
           name = "EDGE_SHARED_SECRET"
           value_source {
