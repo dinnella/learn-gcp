@@ -1,6 +1,6 @@
 # Terraform
 **/.terraform/
-# .terraform.lock.hcl is committed so CI uses the same provider versions as local
+**/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars
