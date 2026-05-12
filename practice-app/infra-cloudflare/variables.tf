@@ -1,6 +1,7 @@
-variable "zone_id" {
-  description = "Cloudflare zone ID for next3k.com."
+variable "zone_name" {
+  description = "Cloudflare zone apex domain, e.g. next3k.com. Used to look up the zone ID via the API."
   type        = string
+  default     = "next3k.com"
 }
 
 variable "hostname" {

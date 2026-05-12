@@ -31,7 +31,11 @@ gh variable set GCP_TFSTATE_BUCKET             --repo "${REPO}" --body "${TFSTAT
 gh variable set PUBLIC_DOMAIN                  --repo "${REPO}" --body "levelup.next3k.com"
 gh variable set ENABLE_LB                      --repo "${REPO}" --body "false"
 gh variable set RESTRICT_INGRESS_TO_LB         --repo "${REPO}" --body "false"
-gh variable set ENABLE_CLOUDFLARE              --repo "${REPO}" --body "false"   # flip to true in Phase 4
+gh variable set ENABLE_CLOUDFLARE              --repo "${REPO}" --body "false"   # flip to true after minting Cloudflare token
+
+# Note: CLOUDFLARE_ZONE_ID is no longer needed — the tofu data source looks up
+# the zone ID by name (var.zone_name defaults to next3k.com), avoiding the need
+# to pass the zone ID manually.
 
 echo "==> Setting EDGE_SHARED_SECRET (auto-generated 32-byte hex)"
 # Generated in-memory and pushed straight to GH Secrets. Never echoed.

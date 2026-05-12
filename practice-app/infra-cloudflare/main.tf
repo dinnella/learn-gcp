@@ -2,9 +2,22 @@
 # DNS (proxied) → Transform Rule injecting X-Edge-Auth → Cloud Run origin.
 # WAF (managed ruleset) + per-IP rate limit + zone TLS settings, all on Free plan.
 
+# ----- Zone lookup by name (avoids hardcoding the zone ID) -----
+# The token only needs to be able to list zones (read) + write to the target zone.
+# Use zones[0].id (not .id) per https://developers.cloudflare.com/terraform/troubleshooting/authentication-error-dns-records/
+data "cloudflare_zones" "this" {
+  filter {
+    name = var.zone_name
+  }
+}
+
+locals {
+  zone_id = data.cloudflare_zones.this.zones[0].id
+}
+
 # ----- DNS: proxied CNAME so Cloudflare actually fronts the traffic -----
 resource "cloudflare_record" "app" {
-  zone_id = var.zone_id
+  zone_id = local.zone_id
   name    = var.hostname
   type    = "CNAME"
   content = var.origin_hostname
@@ -15,7 +28,7 @@ resource "cloudflare_record" "app" {
 
 # ----- Zone-wide TLS hardening -----
 resource "cloudflare_zone_settings_override" "tls" {
-  zone_id = var.zone_id
+  zone_id = local.zone_id
   settings {
     ssl                      = "strict" # Full (strict): origin must present a valid cert (Cloud Run does)
     always_use_https         = "on"
@@ -31,7 +44,7 @@ resource "cloudflare_zone_settings_override" "tls" {
 # This is what gates Cloud Run: the origin's middleware rejects any request
 # that doesn't carry this exact header value.
 resource "cloudflare_ruleset" "edge_auth" {
-  zone_id     = var.zone_id
+  zone_id     = local.zone_id
   name        = "edge-auth-injector"
   description = "Inject shared-secret header so Cloud Run accepts only Cloudflare-proxied traffic."
   kind        = "zone"
@@ -54,7 +67,7 @@ resource "cloudflare_ruleset" "edge_auth" {
 
 # ----- WAF: enable Cloudflare Managed Ruleset (free) -----
 resource "cloudflare_ruleset" "waf_managed" {
-  zone_id     = var.zone_id
+  zone_id     = local.zone_id
   name        = "waf-managed"
   description = "Enable Cloudflare Managed Ruleset on ${var.hostname}."
   kind        = "zone"
@@ -73,7 +86,7 @@ resource "cloudflare_ruleset" "waf_managed" {
 
 # ----- Per-IP rate limit (Free plan: 1 rule allowed per zone) -----
 resource "cloudflare_ruleset" "rate_limit" {
-  zone_id     = var.zone_id
+  zone_id     = local.zone_id
   name        = "rate-limit-${replace(var.hostname, ".", "-")}"
   description = "Per-IP rate limit for ${var.hostname}."
   kind        = "zone"
