@@ -163,6 +163,28 @@ jobs:
             -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
             -backend-config="prefix=practice-app-cloudflare"
 
+      # One-time v4→v5 state migration. Safe to leave in: the jq selects are
+      # no-ops once old resource types are gone from state.
+      - name: Migrate cloudflare state (v4→v5)
+        env:
+          BUCKET: ${{ vars.GCP_TFSTATE_BUCKET }}
+        run: |
+          STATE="gs://${BUCKET}/practice-app-cloudflare/default.tfstate"
+          gsutil cp "$STATE" /tmp/cf.tfstate 2>/dev/null || exit 0
+          if jq -e '.resources[] | select(.type == "cloudflare_record" or .type == "cloudflare_zone_settings_override")' /tmp/cf.tfstate >/dev/null 2>&1; then
+            jq '
+              .serial += 1 |
+              .resources |= map(
+                if .type == "cloudflare_record" then .type = "cloudflare_dns_record" else . end
+              ) |
+              .resources |= map(select(.type != "cloudflare_zone_settings_override"))
+            ' /tmp/cf.tfstate > /tmp/cf.migrated.tfstate
+            gsutil cp /tmp/cf.migrated.tfstate "$STATE"
+            echo "State migrated."
+          else
+            echo "State already up to date, nothing to migrate."
+          fi
+
       - name: tofu validate (cloudflare)
         working-directory: practice-app/infra-cloudflare
         run: tofu validate
