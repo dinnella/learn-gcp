@@ -11,8 +11,15 @@ permissions:
   id-token: write       # required for WIF
   pull-requests: write  # required to comment plan output
 
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "0"
+
 jobs:
   detect-labs:
+    # Skip PRs from forks: they don't have access to secrets/WIF and we don't
+    # want their tofu plan output posted as a comment from this workflow.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     outputs:
       labs: ${{ steps.changes.outputs.labs }}
@@ -20,6 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - id: changes
         run: |
           set -euo pipefail
@@ -46,6 +54,8 @@ jobs:
         working-directory: ${{ matrix.lab }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: google-github-actions/auth@v3
         with:
