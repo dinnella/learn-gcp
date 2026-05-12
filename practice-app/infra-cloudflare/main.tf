@@ -82,11 +82,12 @@ resource "cloudflare_ruleset" "edge_auth" {
     expression  = "(http.host eq \"${var.hostname}\")"
     action      = "rewrite"
     action_parameters = {
-      headers = [{
-        name      = "X-Edge-Auth"
-        operation = "set"
-        value     = var.edge_shared_secret
-      }]
+      headers = {
+        "X-Edge-Auth" = {
+          operation = "set"
+          value     = var.edge_shared_secret
+        }
+      }
     }
   }]
 }
@@ -104,13 +105,13 @@ resource "cloudflare_ruleset" "rate_limit" {
     description = "${var.rate_limit_rp10s} req/10s/IP"
     expression  = "(http.host eq \"${var.hostname}\")"
     action      = "block"
-    ratelimit = [{
+    ratelimit = {
       # cf.colo.id is required: Cloudflare counts requests per colo, not globally.
       characteristics     = ["cf.colo.id", "ip.src"]
       # Free plan only supports period=10 (10-second window).
       period              = 10
       requests_per_period = var.rate_limit_rp10s
       mitigation_timeout  = 60
-    }]
+    }
   }]
 }
