@@ -33,6 +33,7 @@ class QuestionForClient(BaseModel):
     id: str
     exam: Exam
     section: str
+    section_title: str
     difficulty: Difficulty
     text: str
     options: list[str]
@@ -63,6 +64,7 @@ class AnswerResponse(BaseModel):
 
 class ReportCardRecommendation(BaseModel):
     section: str
+    section_title: str
     score_pct: float
     suggested_action: str
     docs: list[DocLink] = Field(default_factory=list)

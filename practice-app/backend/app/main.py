@@ -24,13 +24,14 @@ from .models import (
     StartSessionRequest,
 )
 from .questions import get_question, list_difficulties, list_sections
+from .section_titles import title_for
 
 
 logging.basicConfig(level=os.environ.get("APP_LOG_LEVEL", "INFO"))
 log = logging.getLogger("practice-app")
 
 app = FastAPI(
-    title="GCP cert practice tests",
+    title="Next3k LevelUp — GCP cert practice",
     version="0.2.0",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
@@ -48,6 +49,10 @@ def health() -> dict:
         raise HTTPException(503, f"firestore unreachable: {exc}") from exc
 
 
+def _sections_with_titles(exam: str) -> list[dict]:
+    return [{"id": s, "title": title_for(s)} for s in list_sections(exam)]
+
+
 @app.get("/api/exams")
 def exams() -> dict:
     return {
@@ -55,13 +60,13 @@ def exams() -> dict:
             {
                 "id": "pca",
                 "name": "Professional Cloud Architect",
-                "sections": list_sections("pca"),
+                "sections": _sections_with_titles("pca"),
                 "difficulties": list_difficulties("pca"),
             },
             {
                 "id": "devops",
                 "name": "Professional Cloud DevOps Engineer",
-                "sections": list_sections("devops"),
+                "sections": _sections_with_titles("devops"),
                 "difficulties": list_difficulties("devops"),
             },
         ]
@@ -82,7 +87,10 @@ def start(req: StartSessionRequest) -> SessionStartResponse:
     return SessionStartResponse(
         session_id=result["session_id"],
         total=result["total"],
-        first_question=QuestionForClient(**q.model_dump(exclude={"explanation", "doc_links"})),
+        first_question=QuestionForClient(
+            **q.model_dump(exclude={"explanation", "doc_links"}),
+            section_title=title_for(q.section),
+        ),
     )
 
 
@@ -100,7 +108,10 @@ def answer(sid: str, req: AnswerRequest) -> AnswerResponse:
     if result["next_qid"]:
         nq = get_question(result["next_qid"])
         if nq:
-            next_q = QuestionForClient(**nq.model_dump(exclude={"explanation", "doc_links"}))
+            next_q = QuestionForClient(
+                **nq.model_dump(exclude={"explanation", "doc_links"}),
+                section_title=title_for(nq.section),
+            )
     return AnswerResponse(
         correct=result["correct"],
         correct_index=result["correct_index"],

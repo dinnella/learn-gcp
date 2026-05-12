@@ -17,6 +17,7 @@ from .models import (
     SessionSummary,
 )
 from .questions import get_question_full, sample_question_ids
+from .section_titles import title_for
 
 
 PASS_THRESHOLD = 70.0       # % considered "passing" on a mock
@@ -148,6 +149,7 @@ def _build_report_card(
         recs.append(
             ReportCardRecommendation(
                 section=sec,
+                section_title=title_for(sec),
                 score_pct=row["pct"],
                 suggested_action=_suggested_action(row["pct"]),
                 docs=[
@@ -159,9 +161,10 @@ def _build_report_card(
 
     # Build the next-session interactive prompt.
     if weak:
+        weak_titles = ', '.join(title_for(s) for s in weak)
         prompt = (
-            f"You're under {WEAK_SECTION_THRESHOLD:.0f}% on {len(weak)} section(s): "
-            f"{', '.join(weak)}. Want a focused 10-question drill on those at any difficulty?"
+            f"You're under {WEAK_SECTION_THRESHOLD:.0f}% on {len(weak)} topic(s): "
+            f"{weak_titles}. Want a focused 10-question drill on those at any difficulty?"
         )
         next_cfg = {"exam": exam, "num_questions": 10, "sections": weak, "difficulties": None}
     elif score_pct < 90:

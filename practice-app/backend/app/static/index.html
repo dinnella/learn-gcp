@@ -3,95 +3,126 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GCP Cert Practice — Game Mode</title>
+    <title>Next3k LevelUp — GCP Cert Practice</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <header>
-      <h1>GCP Cert Practice <span class="tag">game mode</span></h1>
+      <h1>
+        <span class="logo">⚡</span>
+        <span class="brand"><span class="brand-mark">Next3k</span> LevelUp</span>
+        <span class="tag">cert practice game</span>
+      </h1>
       <nav>
-        <button class="navbtn" data-screen="start-screen">New session</button>
-        <button class="navbtn" data-screen="leaderboard-screen">Leaderboard</button>
+        <button class="navbtn" data-screen="start-screen">🏠 Home</button>
+        <button class="navbtn" data-screen="leaderboard-screen">🏆 Leaderboard</button>
         <span id="env-badge" class="badge"></span>
       </nav>
     </header>
 
     <main id="app">
       <!-- ---------- start ---------- -->
-      <section id="start-screen" class="card">
-        <h2>Start a session</h2>
-        <form id="start-form">
-          <div class="row">
-            <label>
-              Exam
-              <select id="exam">
-                <option value="pca">Professional Cloud Architect</option>
-                <option value="devops">Professional Cloud DevOps Engineer</option>
-              </select>
-            </label>
-            <label>
-              Player name <span class="muted">(for the leaderboard)</span>
-              <input id="player-name" type="text" maxlength="32" placeholder="e.g. dinnella" />
-            </label>
-            <label>
-              # of questions
-              <input id="num" type="number" min="1" max="50" value="10" />
-            </label>
-          </div>
+      <section id="start-screen">
+        <!-- Hero / one-click start -->
+        <div class="hero card">
+          <div class="hero-body">
+            <p class="eyebrow">Ready, player one?</p>
+            <h2>Level up your Google Cloud game.</h2>
+            <p class="hero-sub">10 scenario questions. Live grading. Real exam topics. Climb the leaderboard.</p>
 
-          <fieldset>
-            <legend>Difficulty</legend>
-            <div class="chips" id="difficulty-chips">
-              <label class="chip"><input type="checkbox" value="easy" /> easy <span class="ct" data-diff="easy">0</span></label>
-              <label class="chip"><input type="checkbox" value="medium" checked /> medium <span class="ct" data-diff="medium">0</span></label>
-              <label class="chip"><input type="checkbox" value="hard" checked /> hard <span class="ct" data-diff="hard">0</span></label>
+            <div class="hero-cta">
+              <button id="quick-start-btn" class="cta-primary">▶ Start Playing</button>
+              <p class="muted small">Defaults to <strong>Cloud Architect</strong> · 10 questions · medium difficulty.</p>
             </div>
-            <p class="muted small">Leave all unchecked for any difficulty.</p>
-          </fieldset>
 
-          <fieldset>
-            <legend>Sections <span class="muted">(optional)</span></legend>
-            <div id="sections-list" class="checks"></div>
-          </fieldset>
+            <div class="hero-switch">
+              <label class="muted small">Exam:</label>
+              <div class="seg" id="exam-seg">
+                <button data-exam="pca" class="active">Cloud Architect</button>
+                <button data-exam="devops">DevOps Engineer</button>
+              </div>
+            </div>
 
-          <button type="submit" id="start-btn">Start →</button>
-        </form>
+            <div class="hero-name">
+              <input id="player-name" type="text" maxlength="32" placeholder="Player name (optional, for leaderboard)" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Advanced -->
+        <details class="card adv">
+          <summary>⚙️ Advanced — pick your own topics &amp; difficulty</summary>
+          <form id="start-form">
+            <div class="row">
+              <label>
+                # of questions
+                <input id="num" type="number" min="1" max="50" value="10" />
+              </label>
+            </div>
+
+            <fieldset>
+              <legend>Difficulty</legend>
+              <div class="chips" id="difficulty-chips">
+                <label class="chip"><input type="checkbox" value="easy" /> 🟢 easy <span class="ct" data-diff="easy">0</span></label>
+                <label class="chip"><input type="checkbox" value="medium" checked /> 🟡 medium <span class="ct" data-diff="medium">0</span></label>
+                <label class="chip"><input type="checkbox" value="hard" checked /> 🔴 hard <span class="ct" data-diff="hard">0</span></label>
+              </div>
+              <p class="muted small">Leave all unchecked for any difficulty.</p>
+            </fieldset>
+
+            <fieldset>
+              <legend>Topics <span class="muted">(optional — leave empty for a mix)</span></legend>
+              <div id="sections-list" class="checks"></div>
+            </fieldset>
+
+            <button type="submit" id="start-btn" class="cta-primary">Start custom session →</button>
+          </form>
+        </details>
       </section>
 
       <!-- ---------- quiz ---------- -->
       <section id="quiz-screen" class="card hidden">
-        <div class="progress">
-          <span id="progress-text">Question 1</span>
-          <span id="difficulty-badge" class="diff-badge"></span>
-          <div class="bar"><div id="progress-fill"></div></div>
+        <div class="quiz-hud">
+          <div class="hud-left">
+            <span id="progress-text" class="hud-pill">Question 1 / 10</span>
+            <span id="difficulty-badge" class="diff-badge"></span>
+          </div>
+          <div class="hud-right">
+            <span id="streak-pill" class="streak hidden">🔥 <span id="streak-n">0</span> streak</span>
+            <span id="score-pill" class="hud-pill score">⭐ <span id="score-n">0</span></span>
+          </div>
         </div>
+        <div class="bar"><div id="progress-fill"></div></div>
 
         <p class="section-tag" id="q-section"></p>
         <h2 id="q-text"></h2>
         <ol id="q-options" class="options"></ol>
 
         <fieldset class="confidence">
-          <legend>Confidence:</legend>
-          <label><input type="radio" name="confidence" value="confident" checked /> Confident</label>
-          <label><input type="radio" name="confidence" value="narrowed" /> Narrowed to 2</label>
-          <label><input type="radio" name="confidence" value="guess" /> Pure guess</label>
+          <legend>How confident?</legend>
+          <label><input type="radio" name="confidence" value="confident" checked /> 💪 Confident</label>
+          <label><input type="radio" name="confidence" value="narrowed" /> 🤔 Down to 2</label>
+          <label><input type="radio" name="confidence" value="guess" /> 🎲 Just guessing</label>
         </fieldset>
 
-        <button id="submit-btn" disabled>Submit answer</button>
+        <button id="submit-btn" class="cta-primary" disabled>Lock in answer</button>
 
         <div id="explanation" class="hidden">
-          <p id="verdict"></p>
+          <p id="verdict" class="verdict"></p>
           <p id="explain-text"></p>
           <div id="answer-doc-links" class="doc-links"></div>
-          <button id="next-btn">Next →</button>
+          <button id="next-btn" class="cta-primary">Next question →</button>
         </div>
       </section>
 
       <!-- ---------- results / report card ---------- -->
       <section id="results-screen" class="card hidden">
+        <div id="confetti-stage"></div>
+
         <div class="results-header">
           <div>
-            <h2>Report card</h2>
+            <p class="eyebrow" id="r-headline">Run complete</p>
+            <h2>Your report card</h2>
             <p class="muted" id="r-meta"></p>
           </div>
           <div class="grade-block">
@@ -102,46 +133,46 @@
 
         <div class="score-row">
           <div class="score-stat"><div class="lbl">Score</div><div id="r-score" class="val">—</div></div>
-          <div class="score-stat"><div class="lbl">Easy</div><div id="r-easy" class="val">—</div></div>
-          <div class="score-stat"><div class="lbl">Medium</div><div id="r-medium" class="val">—</div></div>
-          <div class="score-stat"><div class="lbl">Hard</div><div id="r-hard" class="val">—</div></div>
+          <div class="score-stat"><div class="lbl">🟢 Easy</div><div id="r-easy" class="val">—</div></div>
+          <div class="score-stat"><div class="lbl">🟡 Medium</div><div id="r-medium" class="val">—</div></div>
+          <div class="score-stat"><div class="lbl">🔴 Hard</div><div id="r-hard" class="val">—</div></div>
         </div>
 
-        <h3>By section</h3>
+        <h3>By topic</h3>
         <table id="r-sections">
-          <thead><tr><th>Section</th><th>Score</th><th></th></tr></thead>
+          <thead><tr><th>Topic</th><th>Score</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
 
-        <h3>Recommendations</h3>
+        <h3>What to study next</h3>
         <div id="r-recs"></div>
 
         <div id="next-suggestion" class="next-suggestion">
           <p id="next-prompt"></p>
-          <button id="next-session-btn">Start that session</button>
-          <button class="ghost" id="restart-btn">New session (custom)</button>
+          <button id="next-session-btn" class="cta-primary">▶ Start that session</button>
+          <button class="ghost" id="restart-btn">Custom session</button>
         </div>
 
-        <h3>Save your score</h3>
+        <h3>🏆 Save your score</h3>
         <div id="score-submit-block">
           <input id="score-name" type="text" maxlength="32" placeholder="Player name" />
-          <button id="submit-score-btn">Save to leaderboard</button>
+          <button id="submit-score-btn" class="cta-primary">Save to leaderboard</button>
           <p id="score-submit-msg" class="muted small"></p>
         </div>
       </section>
 
       <!-- ---------- leaderboard ---------- -->
       <section id="leaderboard-screen" class="card hidden">
-        <h2>High scores</h2>
+        <h2>🏆 High scores</h2>
         <div class="tabs">
-          <button class="tab active" data-exam="pca">PCA</button>
-          <button class="tab" data-exam="devops">DevOps</button>
+          <button class="tab active" data-exam="pca">Cloud Architect</button>
+          <button class="tab" data-exam="devops">DevOps Engineer</button>
         </div>
         <table id="lb-table">
           <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Mix</th><th>When</th></tr></thead>
           <tbody></tbody>
         </table>
-        <p id="lb-empty" class="muted hidden">No scores yet — be the first.</p>
+        <p id="lb-empty" class="muted hidden">No scores yet — be the first to set one!</p>
       </section>
     </main>
 

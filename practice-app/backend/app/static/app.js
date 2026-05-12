@@ -1,4 +1,4 @@
-// Vanilla JS SPA — game mode.
+// Next3k LevelUp — vanilla JS SPA.
 // Screens: start, quiz, results (report card), leaderboard.
 
 const $ = (id) => document.getElementById(id);
@@ -6,12 +6,17 @@ const $ = (id) => document.getElementById(id);
 const SCREENS = ["start-screen", "quiz-screen", "results-screen", "leaderboard-screen"];
 function show(id) {
   for (const s of SCREENS) $(s).classList.toggle("hidden", s !== id);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 const state = {
+  exam: "pca",                  // current exam selected on the start screen
   sessionId: null,
   total: 0,
   answered: 0,
+  correct: 0,                   // running correct count for HUD
+  streak: 0,                    // consecutive-correct counter
+  bestStreak: 0,
   currentQuestion: null,
   selected: null,
   nextQuestion: null,
@@ -32,9 +37,20 @@ async function init() {
 
   if (state.playerName) $("player-name").value = state.playerName;
 
-  await loadExamMeta($("exam").value);
-  $("exam").addEventListener("change", (e) => loadExamMeta(e.target.value));
-  $("start-form").addEventListener("submit", onStart);
+  await loadExamMeta(state.exam);
+
+  // Segmented exam picker on start screen
+  for (const btn of document.querySelectorAll("#exam-seg button")) {
+    btn.addEventListener("click", async () => {
+      document.querySelectorAll("#exam-seg button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.exam = btn.dataset.exam;
+      await loadExamMeta(state.exam);
+    });
+  }
+
+  $("quick-start-btn").addEventListener("click", onQuickStart);
+  $("start-form").addEventListener("submit", onCustomStart);
   $("submit-btn").addEventListener("click", onSubmitAnswer);
   $("next-btn").addEventListener("click", onNext);
   $("restart-btn").addEventListener("click", () => show("start-screen"));
@@ -44,7 +60,7 @@ async function init() {
   for (const btn of document.querySelectorAll(".navbtn")) {
     btn.addEventListener("click", () => {
       const target = btn.dataset.screen;
-      if (target === "leaderboard-screen") loadLeaderboard("pca");
+      if (target === "leaderboard-screen") loadLeaderboard(state.exam);
       show(target);
     });
   }
@@ -57,17 +73,18 @@ async function init() {
   }
 }
 
+let _examCache = null;
 async function loadExamMeta(exam) {
-  const r = await (await fetch("/api/exams")).json();
-  const ex = r.exams.find((e) => e.id === exam);
+  if (!_examCache) _examCache = await (await fetch("/api/exams")).json();
+  const ex = _examCache.exams.find((e) => e.id === exam);
   if (!ex) return;
 
-  // Sections checklist
+  // Topics checklist (advanced panel) — section is now {id, title}.
   const list = $("sections-list");
   list.innerHTML = "";
   for (const sec of ex.sections) {
     const wrap = document.createElement("label");
-    wrap.innerHTML = `<input type="checkbox" value="${sec}" /> ${sec}`;
+    wrap.innerHTML = `<input type="checkbox" value="${sec.id}" /> ${sec.title}`;
     list.appendChild(wrap);
   }
 
@@ -90,10 +107,21 @@ function readSections() {
   ).map((el) => el.value);
 }
 
-async function onStart(e) {
+function onQuickStart() {
+  // One-click happy path: 10 medium questions on the currently-selected exam.
+  startSession({
+    exam: state.exam,
+    num_questions: 10,
+    sections: null,
+    difficulties: ["medium"],
+    player_name: $("player-name").value.trim() || null,
+  });
+}
+
+async function onCustomStart(e) {
   e.preventDefault();
   await startSession({
-    exam: $("exam").value,
+    exam: state.exam,
     num_questions: parseInt($("num").value, 10),
     sections: readSections().length ? readSections() : null,
     difficulties: readDifficulties().length ? readDifficulties() : null,
@@ -106,8 +134,9 @@ async function startSession(body) {
     state.playerName = body.player_name;
     localStorage.setItem("playerName", body.player_name);
   }
-  $("start-btn").disabled = true;
-  $("start-btn").textContent = "Starting…";
+  const startBtns = [$("quick-start-btn"), $("start-btn")];
+  startBtns.forEach((b) => b && (b.disabled = true));
+
   let resp;
   try {
     resp = await fetch("/api/sessions", {
@@ -117,26 +146,27 @@ async function startSession(body) {
     });
   } catch (err) {
     alert("Network error: " + err);
-    $("start-btn").disabled = false;
-    $("start-btn").textContent = "Start →";
+    startBtns.forEach((b) => b && (b.disabled = false));
     return;
   }
   if (!resp.ok) {
     const j = await resp.json().catch(() => ({}));
     alert("Could not start: " + (j.detail || resp.statusText));
-    $("start-btn").disabled = false;
-    $("start-btn").textContent = "Start →";
+    startBtns.forEach((b) => b && (b.disabled = false));
     return;
   }
   const data = await resp.json();
   state.sessionId = data.session_id;
   state.total = data.total;
   state.answered = 0;
+  state.correct = 0;
+  state.streak = 0;
+  state.bestStreak = 0;
   state.lastSummary = null;
+  updateHud();
   renderQuestion(data.first_question);
   show("quiz-screen");
-  $("start-btn").disabled = false;
-  $("start-btn").textContent = "Start →";
+  startBtns.forEach((b) => b && (b.disabled = false));
 }
 
 async function onStartSuggested() {
@@ -148,13 +178,26 @@ async function onStartSuggested() {
   await startSession(body);
 }
 
+// ---------- HUD ----------
+
+function updateHud() {
+  $("score-n").textContent = state.correct;
+  const sp = $("streak-pill");
+  if (state.streak >= 2) {
+    sp.classList.remove("hidden");
+    $("streak-n").textContent = state.streak;
+  } else {
+    sp.classList.add("hidden");
+  }
+}
+
 // ---------- render question ----------
 
 function renderQuestion(q) {
   state.currentQuestion = q;
   state.selected = null;
 
-  $("q-section").textContent = q.section;
+  $("q-section").textContent = q.section_title || q.section;
   const dbadge = $("difficulty-badge");
   dbadge.textContent = q.difficulty;
   dbadge.className = "diff-badge " + q.difficulty;
@@ -183,7 +226,7 @@ function renderQuestion(q) {
   $("answer-doc-links").innerHTML = "";
 
   const pct = Math.round((state.answered / state.total) * 100);
-  $("progress-text").textContent = `Question ${state.answered + 1} of ${state.total}`;
+  $("progress-text").textContent = `Question ${state.answered + 1} / ${state.total}`;
   $("progress-fill").style.width = pct + "%";
 }
 
@@ -211,6 +254,15 @@ async function onSubmitAnswer() {
   const data = await resp.json();
   state.answered = data.progress.answered;
 
+  if (data.correct) {
+    state.correct += 1;
+    state.streak += 1;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+  } else {
+    state.streak = 0;
+  }
+  updateHud();
+
   const ol = $("q-options");
   ol.querySelectorAll("li").forEach((el) => {
     el.classList.add("disabled");
@@ -219,8 +271,15 @@ async function onSubmitAnswer() {
     else if (idx === state.selected) el.classList.add("incorrect");
   });
 
-  $("verdict").textContent = data.correct ? "Correct ✓" : "Incorrect ✗";
-  $("verdict").className = data.correct ? "correct" : "incorrect";
+  const verdict = $("verdict");
+  if (data.correct) {
+    const flair = state.streak >= 3 ? ` 🔥 ${state.streak}-streak!` : "";
+    verdict.innerHTML = `✅ <strong>Correct!</strong>${flair}`;
+    verdict.className = "verdict correct";
+  } else {
+    verdict.innerHTML = `❌ <strong>Not quite.</strong>`;
+    verdict.className = "verdict incorrect";
+  }
   $("explain-text").textContent = data.explanation || "";
 
   const links = $("answer-doc-links");
@@ -230,6 +289,12 @@ async function onSubmitAnswer() {
     a.href = d.url; a.target = "_blank"; a.rel = "noopener";
     a.textContent = d.title;
     links.appendChild(a);
+  }
+  if ((data.doc_links || []).length) {
+    const heading = document.createElement("p");
+    heading.className = "doc-heading muted small";
+    heading.textContent = "📚 Read more:";
+    links.prepend(heading);
   }
 
   $("explanation").classList.remove("hidden");
@@ -247,8 +312,16 @@ async function renderResults() {
   const r = await (await fetch(`/api/sessions/${state.sessionId}`)).json();
   state.lastSummary = r;
 
+  // Headline reacts to grade.
+  const gradeLetter = r.report_card?.overall_grade;
+  const headlines = {
+    A: "🏆 Outstanding!", B: "🎉 Strong run!", C: "👍 Solid effort",
+    D: "🧠 Plenty of room to grow", F: "💪 Time to study up",
+  };
+  $("r-headline").textContent = headlines[gradeLetter] || "Run complete";
+
   $("r-meta").textContent =
-    `${r.exam.toUpperCase()} • ${r.answered}/${r.total} answered • ${new Date(r.finished_at || Date.now()).toLocaleString()}`;
+    `${r.exam.toUpperCase()} • ${r.answered}/${r.total} answered • best streak: ${state.bestStreak} • ${new Date(r.finished_at || Date.now()).toLocaleString()}`;
 
   const rc = r.report_card || {};
   const grade = rc.overall_grade || "—";
@@ -271,17 +344,28 @@ async function renderResults() {
   $("r-medium").textContent = fmtDiff(r.per_difficulty.medium);
   $("r-hard").textContent = fmtDiff(r.per_difficulty.hard);
 
+  // Section title lookup, built from cached /api/exams.
+  const titles = {};
+  if (_examCache) {
+    for (const ex of _examCache.exams)
+      for (const s of ex.sections) titles[s.id] = s.title;
+  }
+
   // Sections table
   const tbody = $("r-sections").querySelector("tbody");
   tbody.innerHTML = "";
   const secs = Object.entries(r.per_section).sort(([a], [b]) => a.localeCompare(b));
   for (const [sec, row] of secs) {
-    const cls = row.pct < 50 ? "bad" : row.pct < 70 ? "warn" : "";
+    const cls = row.pct < 50 ? "bad" : row.pct < 70 ? "warn" : "good";
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><code>${sec}</code></td>
-      <td>${row.correct}/${row.total} (${row.pct}%)</td>
-      <td><span class="sec-bar ${cls}" style="width:${Math.max(2, row.pct)}px"></span></td>
+      <td><strong>${titles[sec] || sec}</strong></td>
+      <td>${row.correct}/${row.total} <span class="muted small">(${row.pct}%)</span></td>
+      <td>
+        <div class="sec-track">
+          <div class="sec-bar ${cls}" style="width:${Math.max(2, row.pct)}%"></div>
+        </div>
+      </td>
     `;
     tbody.appendChild(tr);
   }
@@ -290,7 +374,7 @@ async function renderResults() {
   const recsEl = $("r-recs");
   recsEl.innerHTML = "";
   if (!rc.recommendations || rc.recommendations.length === 0) {
-    recsEl.innerHTML = `<p class="muted">All sections strong — nothing to drill 🎉</p>`;
+    recsEl.innerHTML = `<p class="muted">All topics strong — nothing to drill 🎉</p>`;
   } else {
     for (const rec of rc.recommendations) {
       const card = document.createElement("div");
@@ -299,7 +383,7 @@ async function renderResults() {
         (d) => `<a href="${d.url}" target="_blank" rel="noopener">${d.title}</a>`
       ).join("");
       card.innerHTML = `
-        <div class="head"><strong>${rec.section}</strong><span class="pct">${rec.score_pct}%</span></div>
+        <div class="head"><strong>${rec.section_title || rec.section}</strong><span class="pct">${rec.score_pct}%</span></div>
         <p>${rec.suggested_action}</p>
         <div class="doc-links">${docs}</div>
       `;
@@ -315,6 +399,7 @@ async function renderResults() {
   $("submit-score-btn").disabled = false;
 
   show("results-screen");
+  if (rc.passed_mock) burstConfetti();
 }
 
 // ---------- score submit ----------
@@ -339,7 +424,7 @@ async function onSubmitScore() {
   }
   state.playerName = name;
   localStorage.setItem("playerName", name);
-  $("score-submit-msg").textContent = "Saved ✓ — view it on the Leaderboard tab.";
+  $("score-submit-msg").textContent = "Saved ✓ — switch to the Leaderboard tab to see it.";
 }
 
 // ---------- leaderboard ----------
@@ -354,18 +439,43 @@ async function loadLeaderboard(exam) {
   }
   $("lb-empty").classList.add("hidden");
   r.entries.forEach((e, i) => {
-    const mix = Object.entries(e.difficulty_mix).map(([d, n]) => `${d.charAt(0)}:${n}`).join(" ");
+    const mix = Object.entries(e.difficulty_mix).map(([d, n]) => `${d.charAt(0).toUpperCase()}${n}`).join(" ");
     const when = new Date(e.finished_at).toLocaleDateString();
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${i + 1}</td>
-      <td>${e.player_name}</td>
+      <td><strong>${escapeHtml(e.player_name)}</strong></td>
       <td><strong>${e.score_pct}%</strong> <span class="muted small">(${e.answered}/${e.total})</span></td>
       <td class="muted small">${mix}</td>
       <td class="muted small">${when}</td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
+// ---------- confetti ----------
+
+function burstConfetti() {
+  const stage = $("confetti-stage");
+  if (!stage) return;
+  stage.innerHTML = "";
+  const colors = ["#4285f4", "#34a853", "#fbbc04", "#ea4335", "#ffd54a"];
+  for (let i = 0; i < 40; i++) {
+    const piece = document.createElement("span");
+    piece.className = "confetti";
+    piece.style.left = Math.random() * 100 + "%";
+    piece.style.background = colors[i % colors.length];
+    piece.style.animationDelay = (Math.random() * 0.6) + "s";
+    piece.style.animationDuration = (1.4 + Math.random() * 1.6) + "s";
+    stage.appendChild(piece);
+  }
+  setTimeout(() => (stage.innerHTML = ""), 3500);
 }
 
 init();

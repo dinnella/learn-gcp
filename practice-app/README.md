@@ -1,6 +1,12 @@
-# Practice-test app
+# Practice-test app — *Next3k LevelUp*
 
 Interactive PCA + DevOps practice exam, with **full local emulation** of GCP services so you can develop and run questions without spending money. Production deploys to Cloud Run + Firestore (Native) via GitHub Actions + OpenTofu.
+
+- **Brand:** Next3k LevelUp
+- **Production URL:** https://levelup.next3k.com (Cloud Run service behind a custom domain mapping)
+- **Local URL:** http://localhost:8080
+
+> The directory, container, and image names stay `practice-app` — that's the internal codename. The user-facing brand is *Next3k LevelUp*.
 
 ## Architecture
 

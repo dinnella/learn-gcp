@@ -6,6 +6,7 @@ from typing import Iterable
 
 from .db import QUESTIONS, get_db
 from .models import Question
+from .section_titles import title_for
 
 
 def _doc_to_question(doc) -> Question:
