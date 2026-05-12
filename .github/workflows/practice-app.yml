@@ -225,7 +225,7 @@ jobs:
             RULESET_ID=$(echo "$RULESETS" | jq -r ".result[]? | select(.phase == \"$PHASE\") | .id // empty")
             if [ -n "$RULESET_ID" ]; then
               echo "Importing $RESOURCE ($RULESET_ID) — already in state is OK"
-              tofu import "$RESOURCE" "$ZONE_ID/$RULESET_ID" || true
+              tofu import "$RESOURCE" "zones/$ZONE_ID/$RULESET_ID" || true
             else
               echo "No existing ruleset for $PHASE — apply will create it."
             fi
