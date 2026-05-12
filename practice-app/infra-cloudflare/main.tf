@@ -83,9 +83,17 @@ resource "cloudflare_ruleset" "edge_auth" {
     action      = "rewrite"
     action_parameters = {
       headers = {
+        # Inject auth secret so Cloud Run middleware accepts the request.
         "X-Edge-Auth" = {
           operation = "set"
           value     = var.edge_shared_secret
+        }
+        # Rewrite Host to the Cloud Run hostname so Cloud Run's frontend
+        # can route the request. Cloudflare forwards the original Host
+        # (levelup.next3k.com) by default, which Cloud Run doesn't recognise.
+        "Host" = {
+          operation = "set"
+          value     = var.origin_hostname
         }
       }
     }
