@@ -49,6 +49,22 @@ SECTION_TITLES: dict[str, str] = {
     "DEVOPS-5.1": "Capacity planning & scaling",
     "DEVOPS-5.2": "Cost optimization",
     "DEVOPS-5.3": "Reliability engineering practices",
+    # ---- Generative AI Leader ----
+    "GENAI-1.1": "Core gen AI concepts & use cases",
+    "GENAI-1.2": "Data types, quality & accessibility",
+    "GENAI-1.3": "Layers of the gen AI landscape",
+    "GENAI-1.4": "Google's foundation models",
+    "GENAI-2.1": "Google Cloud's gen AI strengths",
+    "GENAI-2.2": "Prebuilt gen AI for work (Gemini app & Workspace)",
+    "GENAI-2.3": "Customer experience (search & CES)",
+    "GENAI-2.4": "Vertex AI for developers",
+    "GENAI-2.5": "Tooling for gen AI agents",
+    "GENAI-3.1": "Overcoming foundation model limitations",
+    "GENAI-3.2": "Prompt engineering techniques",
+    "GENAI-3.3": "Grounding & sampling parameters",
+    "GENAI-4.1": "Implementing transformational gen AI",
+    "GENAI-4.2": "Secure AI & SAIF",
+    "GENAI-4.3": "Responsible AI in business",
 }
 
 

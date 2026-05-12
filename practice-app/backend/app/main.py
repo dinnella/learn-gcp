@@ -156,6 +156,12 @@ def exams() -> dict:
                 "sections": _sections_with_titles("devops"),
                 "difficulties": list_difficulties("devops"),
             },
+            {
+                "id": "genai",
+                "name": "Generative AI Leader",
+                "sections": _sections_with_titles("genai"),
+                "difficulties": list_difficulties("genai"),
+            },
         ]
     }
 
@@ -235,8 +241,8 @@ def submit_score(sid: str, req: SubmitScoreRequest) -> ScoreEntry:
 
 @app.get("/api/leaderboard/{exam}", response_model=LeaderboardResponse)
 def leaderboard(exam: str, limit: int = 20) -> LeaderboardResponse:
-    if exam not in ("pca", "devops"):
-        raise HTTPException(400, "exam must be 'pca' or 'devops'")
+    if exam not in ("pca", "devops", "genai"):
+        raise HTTPException(400, "exam must be 'pca', 'devops', or 'genai'")
     return sessions_svc.leaderboard(exam, min(limit, 100))
 
 
