@@ -1,4 +1,4 @@
-name: OpenTofu Apply
+name: labs — tofu apply (push to main)
 
 on:
   push:

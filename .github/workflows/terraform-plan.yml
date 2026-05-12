@@ -1,4 +1,4 @@
-name: OpenTofu Plan
+name: labs — tofu plan (PR preview)
 
 on:
   pull_request:
