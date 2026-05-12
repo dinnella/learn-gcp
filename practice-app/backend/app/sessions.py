@@ -1,6 +1,7 @@
 """Session lifecycle, report card, leaderboard."""
 from __future__ import annotations
 
+import random
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -28,6 +29,22 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _build_option_orders(qids: list[str]) -> dict[str, list[int]]:
+    """Random per-question option permutation (display→original index).
+
+    Stored on the session so the same shuffle is re-applied for both
+    serving the question and grading the answer.
+    """
+    orders: dict[str, list[int]] = {}
+    for qid in qids:
+        full = get_question_full(qid)
+        n = len(full["options"]) if full else 4
+        perm = list(range(n))
+        random.shuffle(perm)
+        orders[qid] = perm
+    return orders
+
+
 # ------------------------------------------------------------------
 # Sessions
 # ------------------------------------------------------------------
@@ -46,17 +63,24 @@ def start_session(
             "Try widening filters or run `make seed`."
         )
     sid = uuid.uuid4().hex[:12]
+    option_orders = _build_option_orders(qids)
     doc = {
         "exam": exam,
         "started_at": _now_iso(),
         "finished_at": None,
         "question_ids": qids,
+        "option_orders": option_orders,
         "answers": [],
         "player_name": player_name,
         "filters": {"sections": sections, "difficulties": difficulties},
     }
     get_db().collection(SESSIONS).document(sid).set(doc)
-    return {"session_id": sid, "total": len(qids), "first_qid": qids[0]}
+    return {
+        "session_id": sid,
+        "total": len(qids),
+        "first_qid": qids[0],
+        "first_order": option_orders[qids[0]],
+    }
 
 
 def _load(sid: str) -> dict | None:
@@ -83,13 +107,28 @@ def record_answer(
     full = get_question_full(question_id)
     if full is None:
         raise KeyError("question not found")
-    correct_index = full["correct_index"]
-    is_correct = selected_index == correct_index
+    canonical_correct = full["correct_index"]
+
+    # Translate the user's display-space pick back to canonical via the
+    # per-session option permutation so grading aligns with the JSON.
+    order = (session.get("option_orders") or {}).get(question_id)
+    if order and 0 <= selected_index < len(order):
+        canonical_selected = order[selected_index]
+    else:
+        canonical_selected = selected_index
+    is_correct = canonical_selected == canonical_correct
+
+    # The client thinks in display space — translate the correct index back
+    # so the UI can highlight the right option after answering.
+    if order and canonical_correct in order:
+        display_correct = order.index(canonical_correct)
+    else:
+        display_correct = canonical_correct
 
     new_answer = {
         "question_id": question_id,
         "selected_index": selected_index,
-        "correct_index": correct_index,
+        "correct_index": display_correct,
         "correct": is_correct,
         "confidence": confidence,
         "ts": _now_iso(),
@@ -103,12 +142,16 @@ def record_answer(
     ref.update(update)
 
     next_qid = session["question_ids"][answered] if not finished else None
+    next_order = (
+        (session.get("option_orders") or {}).get(next_qid) if next_qid else None
+    )
     return {
         "correct": is_correct,
-        "correct_index": correct_index,
+        "correct_index": display_correct,
         "explanation": full.get("explanation"),
         "doc_links": full.get("doc_links", []),
         "next_qid": next_qid,
+        "next_order": next_order,
         "answered": answered,
         "total": total,
     }

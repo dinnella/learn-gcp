@@ -181,8 +181,9 @@ fieldset {
 }
 legend { color: var(--muted); padding: 0 0.4rem; font-size: 0.85rem; }
 
-.checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.35rem 1rem; }
-.checks label { color: var(--text); font-size: 0.9rem; margin-bottom: 0; display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; cursor: pointer; }
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.35rem 1rem; }
+.checks label { color: var(--text); font-size: 0.9rem; margin-bottom: 0; display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.2rem 0; cursor: pointer; }
+.checks label input { margin-top: 0.2rem; flex-shrink: 0; }
 .checks label:hover { color: var(--accent); }
 
 .chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -402,6 +403,7 @@ th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: u
 /* GitHub nav link */
 .github-nav {
   display: inline-flex; align-items: center; gap: 0.4rem;
+  color: var(--text);
   text-decoration: none;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }

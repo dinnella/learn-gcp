@@ -75,6 +75,22 @@ def get_question(qid: str) -> Question | None:
     return _doc_to_question(snap)
 
 
+def get_question_shuffled(qid: str, order: list[int]) -> Question | None:
+    """Return the question with options reordered per `order`.
+
+    `order[i]` is the original (canonical) index that should appear at
+    display position `i`. Used so each session sees a different option
+    order, eliminating positional tells and increasing replay value.
+    """
+    q = get_question(qid)
+    if q is None:
+        return None
+    if not order or len(order) != len(q.options):
+        return q
+    q.options = [q.options[i] for i in order]
+    return q
+
+
 def get_question_full(qid: str) -> dict | None:
     """Returns the full document including correct_index. Server-side only."""
     snap = get_db().collection(QUESTIONS).document(qid).get()

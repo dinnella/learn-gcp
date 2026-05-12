@@ -24,7 +24,7 @@ from .models import (
     SessionSummary,
     StartSessionRequest,
 )
-from .questions import get_question, list_difficulties, list_sections
+from .questions import get_question, get_question_shuffled, list_difficulties, list_sections
 from .section_titles import title_for
 
 
@@ -168,7 +168,7 @@ def start(req: StartSessionRequest) -> SessionStartResponse:
         )
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
-    q = get_question(result["first_qid"])
+    q = get_question_shuffled(result["first_qid"], result.get("first_order") or [])
     if q is None:
         raise HTTPException(500, "first question vanished mid-session")
     return SessionStartResponse(
@@ -193,7 +193,7 @@ def answer(sid: str, req: AnswerRequest) -> AnswerResponse:
         raise HTTPException(400, str(e)) from e
     next_q = None
     if result["next_qid"]:
-        nq = get_question(result["next_qid"])
+        nq = get_question_shuffled(result["next_qid"], result.get("next_order") or [])
         if nq:
             next_q = QuestionForClient(
                 **nq.model_dump(exclude={"explanation", "doc_links"}),
