@@ -163,41 +163,40 @@ jobs:
             -backend-config="bucket=${{ vars.GCP_TFSTATE_BUCKET }}" \
             -backend-config="prefix=practice-app-cloudflare"
 
-      # One-time v4→v5 state migration. Safe to leave in: the jq selects are
-      # no-ops once old resource types are gone from state.
+      # One-time v4→v5 state migration. Uses tofu state pull/push so GCP WIF
+      # credentials work (gsutil doesn't understand WIF credential files).
+      # Safe to leave in: the jq selects are no-ops once old types are gone.
       - name: Migrate cloudflare state (v4→v5)
-        env:
-          BUCKET: ${{ vars.GCP_TFSTATE_BUCKET }}
+        working-directory: practice-app/infra-cloudflare
         run: |
-          STATE="gs://${BUCKET}/practice-app-cloudflare/default.tfstate"
-          echo "Looking for state at: $STATE"
-          echo "--- GCS prefix contents ---"
-          gsutil ls "gs://${BUCKET}/practice-app-cloudflare/" 2>&1 || echo "(prefix empty or not found)"
+          echo "Pulling current state..."
+          tofu state pull > /tmp/cf.tfstate
 
-          if ! gsutil ls "$STATE" >/dev/null 2>&1; then
-            echo "State file not found — skipping migration."
-            exit 0
-          fi
-
-          gsutil cp "$STATE" /tmp/cf.tfstate
-          echo "Downloaded state. Resource types present:"
+          echo "Resource types in state:"
           jq '[.resources[].type] | unique' /tmp/cf.tfstate
 
-          if jq -e '.resources[] | select(.type == "cloudflare_record" or .type == "cloudflare_zone_settings_override")' /tmp/cf.tfstate >/dev/null 2>&1; then
+          if jq -e '.resources[] | select(
+                .type == "cloudflare_record" or
+                .type == "cloudflare_zone_settings_override" or
+                .type == "cloudflare_ruleset"
+              )' /tmp/cf.tfstate >/dev/null 2>&1; then
             echo "Found v4 resource types — migrating..."
             jq '
               .serial += 1 |
               .resources |= map(
                 if .type == "cloudflare_record" then .type = "cloudflare_dns_record" else . end
               ) |
-              .resources |= map(select(.type != "cloudflare_zone_settings_override"))
+              .resources |= map(select(
+                .type != "cloudflare_zone_settings_override" and
+                .type != "cloudflare_ruleset"
+              ))
             ' /tmp/cf.tfstate > /tmp/cf.migrated.tfstate
-            echo "After migration, resource types:"
+            echo "After migration:"
             jq '[.resources[].type] | unique' /tmp/cf.migrated.tfstate
-            gsutil cp /tmp/cf.migrated.tfstate "$STATE"
+            tofu state push /tmp/cf.migrated.tfstate
             echo "State migrated successfully."
           else
-            echo "No v4 resources found — already migrated or no migration needed."
+            echo "No v4 resources found — skipping."
           fi
 
       - name: tofu validate (cloudflare)
