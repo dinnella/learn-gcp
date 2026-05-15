@@ -1986,11 +1986,12 @@
     ]
   },
   {
-    "id": "pca-1.1-002", "exam": "pca", "section": "PCA-1.1", "difficulty": "medium",
-    "text": "An online retailer needs a global, strongly-consistent inventory database with sub-10-ms reads from each region and the ability to survive a regional outage with RPO=0. The team also wants minimal operational overhead. Which Google Cloud service is the best fit?",
+    "id": "genai-3.2-003", "exam": "genai", "section": "GENAI-3.2", "difficulty": "easy",
+    "text": "Which prompting technique asks the model to explain its step-by-step reasoning before giving the final answer, often improving accuracy on multi-step problems?",
     "options": [
-      "Cloud SQL for PostgreSQL with cross-region read replicas and automated backups for fast restore in the event of a primary regional outage",
-      "Spanner with a multi-region instance configuration (e.g., nam-eur-asia1) so reads are local to each region and writes are synchronous across regions",
+      "Few-shot prompting",
+      "Chain-of-thought prompting",
+      "Zero-shot prompting",
       "Bigtable with two-region replication and read-your-writes consistency on the primary cluster while reads in the secondary region remain eventually consistent",
       "AlloyDB Omni deployed on Compute Engine MIGs across three regions with manual switchover between primaries during a regional event"
     ],

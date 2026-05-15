@@ -42,3 +42,7 @@ node_modules/
 # Local-only operator notes (go-live runbook, secrets cheat sheet, etc.)
 todo.md
 draft.txt
+
+# Local-only design / planning docs (not shipped with the app)
+plans/
+
