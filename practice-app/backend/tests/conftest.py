@@ -32,7 +32,8 @@ def pytest_runtest_setup(item):
 # ---------------------------------------------------------------------------
 
 class _FakeDoc:
-    def __init__(self, data: dict | None = None):
+    def __init__(self, doc_id: str, data: dict | None = None):
+        self.id = doc_id
         self._data = data
 
     @property
@@ -47,9 +48,10 @@ class _FakeDocRef:
     def __init__(self, store: dict, col: str, doc_id: str):
         self._store = store
         self._key = (col, doc_id)
+        self._doc_id = doc_id
 
     def get(self):
-        return _FakeDoc(self._store.get(self._key))
+        return _FakeDoc(self._doc_id, self._store.get(self._key))
 
     def set(self, data: dict):
         self._store[self._key] = dict(data)

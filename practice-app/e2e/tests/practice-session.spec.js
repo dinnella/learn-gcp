@@ -27,8 +27,8 @@ test('home page loads with all key elements', async ({ page }) => {
   await expect(page.locator('h1')).toContainText('LevelUp');
   await expect(page.locator('#quick-start-btn')).toBeVisible();
 
-  // Exam selector shows PCA as default active tab
-  await expect(page.locator('.seg button.active')).toContainText('Cloud Architect');
+  // Exam selector shows PCA as default active tab — assert by data attribute, not display label
+  await expect(page.locator('#exam-seg button[data-exam="pca"]')).toHaveClass(/active/);
 
   // Nav links are present
   await expect(page.locator('button[data-screen="leaderboard-screen"]')).toBeVisible();
