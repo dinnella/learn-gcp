@@ -56,6 +56,12 @@ class _FakeDocRef:
     def set(self, data: dict):
         self._store[self._key] = dict(data)
 
+    def create(self, data: dict):
+        if self._key in self._store:
+            from google.api_core import exceptions as gax
+            raise gax.AlreadyExists(f"document {self._key} already exists")
+        self._store[self._key] = dict(data)
+
     def update(self, data: dict):
         import copy
         from google.cloud import firestore

@@ -14,6 +14,30 @@ from .models import (
 )
 from .questions import get_question_full, list_exams, pick_one_question
 from .section_titles import title_for
+from .tokens import (
+    hash_submit_token,
+    mint_session_secret,
+    mint_submit_token,
+    secret_matches,
+    token_expired,
+    token_hash_matches,
+)
+
+
+def _attach_submit_token(update: dict) -> str:
+    """Generate a one-time submit token, attach the *hash* and bookkeeping
+    fields to ``update`` (which the caller passes to ``ref.update``) and
+    return the raw token so it can be echoed to the client exactly once.
+
+    The raw token is never persisted: only its sha256 hash is stored on
+    the session doc. This way an attacker who learns the session ID and
+    reads the document cannot recover a usable token.
+    """
+    token, expires = mint_submit_token()
+    update["submit_token_hash"] = hash_submit_token(token)
+    update["submit_token_expires_at"] = expires
+    update["submit_token_used"] = False
+    return token
 
 
 # (reset_seconds, easy_w, medium_w, hard_w) — tunable post user-testing
@@ -120,9 +144,10 @@ def start_arcade_session(player_name: str | None, starting_seconds: int) -> dict
     if first_q is None:
         raise ValueError("no questions available")
 
-    sid = uuid.uuid4().hex[:12]
+    sid = uuid.uuid4().hex
     order = _shuffled_options_for(first_q.id)
     starting_ms = starting_seconds * 1000
+    abandon_secret_raw, abandon_secret_hash = mint_session_secret()
     doc = {
         "mode": "arcade",
         "exams": exams,
@@ -148,6 +173,7 @@ def start_arcade_session(player_name: str | None, starting_seconds: int) -> dict
         "option_orders": {first_q.id: order},
         "answers": [],
         "ended_reason": None,
+        "abandon_secret_hash": abandon_secret_hash,
     }
     get_db().collection(SESSIONS).document(sid).set(doc)
     return {
@@ -155,6 +181,7 @@ def start_arcade_session(player_name: str | None, starting_seconds: int) -> dict
         "starting_seconds": starting_seconds,
         "time_remaining_ms": starting_ms,
         "first_question": _arcade_question_payload(first_q, order),
+        "abandon_secret": abandon_secret_raw,
     }
 
 
@@ -189,8 +216,26 @@ def record_arcade_answer(
     if full is None:
         raise KeyError("question not found")
 
-    # Debit elapsed time (clamped).
-    elapsed = max(0, min(client_elapsed_ms, ELAPSED_CLAMP_MS))
+    # Debit elapsed time. Use the *maximum* of what the client claims and
+    # what the server clock says has actually elapsed since the previous
+    # tick, then clamp to 60 s. This stops a scripted client from sending
+    # client_elapsed_ms=0 to grind an arbitrarily high score: the server's
+    # own monotonic measurement establishes a floor.
+    server_elapsed = 0
+    last_tick = session.get("last_tick_at")
+    if last_tick:
+        try:
+            t0 = datetime.fromisoformat(last_tick)
+            server_elapsed = max(
+                0,
+                int((datetime.now(timezone.utc) - t0).total_seconds() * 1000),
+            )
+        except Exception:
+            server_elapsed = 0
+    elapsed = min(
+        max(int(client_elapsed_ms), server_elapsed),
+        ELAPSED_CLAMP_MS,
+    )
     time_remaining_ms = int(session.get("time_remaining_ms", 0)) - elapsed
 
     canonical_correct = full["correct_index"]
@@ -224,14 +269,16 @@ def record_arcade_answer(
             "ended_during": True,
         }
         answers = list(session.get("answers", [])) + [new_answer]
-        ref.update({
+        timeout_update = {
             "answers": answers,
             "answered_total": int(session.get("answered_total", 0)) + 1,
             "time_remaining_ms": 0,
             "last_tick_at": _now_iso(),
             "finished_at": _now_iso(),
             "ended_reason": "time",
-        })
+        }
+        timeout_token = _attach_submit_token(timeout_update)
+        ref.update(timeout_update)
         return {
             "correct": False,
             "correct_index": display_correct,
@@ -251,6 +298,7 @@ def record_arcade_answer(
             "level_up_pending": False,
             "ended": True,
             "ended_reason": "time",
+            "submit_token": timeout_token,
         }
 
     # Grade and update.
@@ -343,6 +391,7 @@ def record_arcade_answer(
             update["current_qid"] = next_q.id
             next_q_payload = _arcade_question_payload(next_q, order2)
 
+    submit_token = _attach_submit_token(update) if ended else None
     ref.update(update)
 
     return {
@@ -364,6 +413,7 @@ def record_arcade_answer(
         "level_up_pending": level_up_pending,
         "ended": ended,
         "ended_reason": ended_reason,
+        "submit_token": submit_token,
     }
 
 
@@ -392,7 +442,7 @@ def continue_arcade_session(sid: str) -> dict:
         "exams": session.get("exams", []),
     })
     if next_q is None:
-        ref.update({
+        exhausted_update = {
             "finished_at": _now_iso(),
             "ended_reason": "exhausted",
             "level_up_pending": False,
@@ -401,7 +451,9 @@ def continue_arcade_session(sid: str) -> dict:
             "correct_in_level": 0,
             "time_remaining_ms": time_remaining_ms,
             "current_qid": None,
-        })
+        }
+        _attach_submit_token(exhausted_update)
+        ref.update(exhausted_update)
         raise ValueError("question pool exhausted")
 
     order = _shuffled_options_for(next_q.id)
@@ -427,7 +479,7 @@ def continue_arcade_session(sid: str) -> dict:
     }
 
 
-def abandon_arcade_session(sid: str) -> ArcadeSessionSummary:
+def abandon_arcade_session(sid: str, abandon_secret: str | None = None) -> ArcadeSessionSummary:
     db = get_db()
     ref = db.collection(SESSIONS).document(sid)
     snap = ref.get()
@@ -436,6 +488,9 @@ def abandon_arcade_session(sid: str) -> ArcadeSessionSummary:
     session = snap.to_dict()
     if session.get("mode") != "arcade":
         raise ValueError("not an arcade session")
+    stored_abandon_hash = session.get("abandon_secret_hash")
+    if stored_abandon_hash and not secret_matches(stored_abandon_hash, abandon_secret):
+        raise PermissionError("invalid abandon_secret")
     finished = session.get("finished_at")
     if finished and session.get("ended_reason") != "abandoned":
         raise ValueError("session already finished")
@@ -506,6 +561,9 @@ def arcade_summary(sid: str) -> ArcadeSessionSummary | None:
         per_exam=dict(per_exam),
         ended_reason=s.get("ended_reason"),
         player_name=s.get("player_name"),
+        # Tokens are not echoed from summary; the raw token is delivered
+        # exactly once in the answer response that ends the run.
+        submit_token=None,
     )
 
 
@@ -513,7 +571,7 @@ def arcade_summary(sid: str) -> ArcadeSessionSummary | None:
 # Leaderboard
 # ---------------------------------------------------------------------------
 
-def submit_arcade_score(sid: str, player_name: str) -> ArcadeScoreEntry:
+def submit_arcade_score(sid: str, player_name: str, submit_token: str) -> ArcadeScoreEntry:
     db = get_db()
     s = _load(sid)
     if s is None or s.get("mode") != "arcade":
@@ -522,6 +580,17 @@ def submit_arcade_score(sid: str, player_name: str) -> ArcadeScoreEntry:
         raise ValueError("session not finished")
     if s.get("ended_reason") == "abandoned":
         raise ValueError("Abandoned runs cannot be submitted")
+
+    stored_hash = s.get("submit_token_hash")
+    expires = s.get("submit_token_expires_at")
+    if not token_hash_matches(stored_hash, submit_token):
+        raise PermissionError("invalid submit_token")
+    doc_id = hash_submit_token(submit_token)
+    existing = db.collection(ARCADE_SCORES).document(doc_id).get()
+    if existing.exists:
+        return ArcadeScoreEntry(**existing.to_dict())
+    if token_expired(expires):
+        raise PermissionError("submit_token expired")
 
     duration_seconds = 0
     try:
@@ -543,8 +612,17 @@ def submit_arcade_score(sid: str, player_name: str) -> ArcadeScoreEntry:
         finished_at=s["finished_at"],
         session_id=sid,
     )
-    db.collection(ARCADE_SCORES).document(sid).set(entry.model_dump())
-    db.collection(SESSIONS).document(sid).update({"player_name": entry.player_name})
+    try:
+        db.collection(ARCADE_SCORES).document(doc_id).create(entry.model_dump())
+    except Exception as e:
+        existing = db.collection(ARCADE_SCORES).document(doc_id).get()
+        if existing.exists:
+            return ArcadeScoreEntry(**existing.to_dict())
+        raise PermissionError("leaderboard write rejected") from e
+    db.collection(SESSIONS).document(sid).update({
+        "player_name": entry.player_name,
+        "submit_token_used": True,
+    })
     return entry
 
 

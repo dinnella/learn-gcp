@@ -135,6 +135,14 @@ def _secrets_compare(a: str, b: str) -> bool:
 
 
 _EDGE_SECRET = os.environ.get("EDGE_SHARED_SECRET", "").strip() or None
+_APP_ENV = os.environ.get("APP_ENV", "").strip().lower()
+if _APP_ENV == "production" and not _EDGE_SECRET:
+    # Fail closed: in production, refuse to boot without the shared secret.
+    # Without it the middleware would let direct *.run.app traffic bypass
+    # Cloudflare's WAF and rate limit entirely.
+    raise RuntimeError(
+        "EDGE_SHARED_SECRET is required when APP_ENV=production; refusing to start."
+    )
 if _EDGE_SECRET:
     log.info("edge-auth: enabled (origin requires X-Edge-Auth header)")
 else:
@@ -201,6 +209,7 @@ def start(req: StartSessionRequest) -> SessionStartResponse:
             **q.model_dump(exclude={"explanation", "doc_links"}),
             section_title=title_for(q.section),
         ),
+        abandon_secret=result.get("abandon_secret"),
     )
 
 
@@ -229,6 +238,7 @@ def answer(sid: str, req: AnswerRequest) -> AnswerResponse:
         doc_links=[DocLink(**d) for d in result["doc_links"]],
         next_question=next_q,
         progress={"answered": result["answered"], "total": result["total"]},
+        submit_token=result.get("submit_token"),
     )
 
 
@@ -244,12 +254,25 @@ def session_summary(sid: str) -> SessionSummary:
 
 class SubmitScoreRequest(BaseModel):
     player_name: str = Field(min_length=1, max_length=32)
+    # One-time eligibility token issued by the server when the run finished.
+    # Without a valid, unexpired, unspent token the leaderboard write is rejected.
+    submit_token: str = Field(min_length=8, max_length=128)
+
+
+class AbandonRequest(BaseModel):
+    # Per-session secret returned in the start response. Required to abandon
+    # the run so a third party who only knows the session ID cannot grief
+    # an active player. Optional in the type only for backward-compat; the
+    # server treats absence as failure when a hash is stored on the doc.
+    abandon_secret: str | None = Field(default=None, max_length=128)
 
 
 @app.post("/api/sessions/{sid}/score", response_model=ScoreEntry)
 def submit_score(sid: str, req: SubmitScoreRequest) -> ScoreEntry:
     try:
-        return sessions_svc.submit_score(sid, req.player_name)
+        return sessions_svc.submit_score(sid, req.player_name, req.submit_token)
+    except PermissionError as e:
+        raise HTTPException(401, str(e)) from e
     except KeyError as e:
         raise HTTPException(404, str(e)) from e
     except ValueError as e:
@@ -276,6 +299,7 @@ def progressive_start(req: StartProgressiveSessionRequest) -> ProgressiveSession
         session_id=result["session_id"],
         max_strikes=result["max_strikes"],
         first_question=QuestionForClient(**fq),
+        abandon_secret=result.get("abandon_secret"),
     )
 
 
@@ -301,6 +325,7 @@ def progressive_answer(sid: str, req: AnswerRequest) -> ProgressiveAnswerRespons
         progress=result["progress"],
         ended=result["ended"],
         ended_reason=result["ended_reason"],
+        submit_token=result.get("submit_token"),
     )
 
 
@@ -315,7 +340,9 @@ def progressive_summary(sid: str) -> ProgressiveSessionSummary:
 @app.post("/api/progressive/sessions/{sid}/score", response_model=ProgressiveScoreEntry)
 def progressive_submit_score(sid: str, req: SubmitScoreRequest) -> ProgressiveScoreEntry:
     try:
-        return progressive_svc.submit_progressive_score(sid, req.player_name)
+        return progressive_svc.submit_progressive_score(sid, req.player_name, req.submit_token)
+    except PermissionError as e:
+        raise HTTPException(401, str(e)) from e
     except KeyError as e:
         raise HTTPException(404, str(e)) from e
     except ValueError as e:
@@ -328,9 +355,12 @@ def progressive_lb(limit: int = 20) -> ProgressiveLeaderboardResponse:
 
 
 @app.post("/api/progressive/sessions/{sid}/abandon", response_model=ProgressiveSessionSummary)
-def progressive_abandon(sid: str) -> ProgressiveSessionSummary:
+def progressive_abandon(sid: str, req: AbandonRequest | None = None) -> ProgressiveSessionSummary:
+    secret = req.abandon_secret if req else None
     try:
-        return progressive_svc.abandon_progressive_session(sid)
+        return progressive_svc.abandon_progressive_session(sid, secret)
+    except PermissionError as e:
+        raise HTTPException(401, str(e)) from e
     except KeyError as e:
         raise HTTPException(404, str(e)) from e
     except ValueError as e:
@@ -350,6 +380,7 @@ def arcade_start(req: StartArcadeSessionRequest) -> ArcadeSessionStartResponse:
         starting_seconds=result["starting_seconds"],
         time_remaining_ms=result["time_remaining_ms"],
         first_question=ArcadeQuestionForClient(**result["first_question"]),
+        abandon_secret=result.get("abandon_secret"),
     )
 
 
@@ -383,6 +414,7 @@ def arcade_answer(sid: str, req: ArcadeAnswerRequest) -> ArcadeAnswerResponse:
         level_up_pending=r["level_up_pending"],
         ended=r["ended"],
         ended_reason=r["ended_reason"],
+        submit_token=r.get("submit_token"),
     )
 
 
@@ -412,7 +444,9 @@ def arcade_session_summary(sid: str) -> ArcadeSessionSummary:
 @app.post("/api/arcade/sessions/{sid}/score", response_model=ArcadeScoreEntry)
 def arcade_submit_score(sid: str, req: SubmitScoreRequest) -> ArcadeScoreEntry:
     try:
-        return arcade_svc.submit_arcade_score(sid, req.player_name)
+        return arcade_svc.submit_arcade_score(sid, req.player_name, req.submit_token)
+    except PermissionError as e:
+        raise HTTPException(401, str(e)) from e
     except KeyError as e:
         raise HTTPException(404, str(e)) from e
     except ValueError as e:
@@ -425,9 +459,12 @@ def arcade_lb(limit: int = 20) -> ArcadeLeaderboardResponse:
 
 
 @app.post("/api/arcade/sessions/{sid}/abandon", response_model=ArcadeSessionSummary)
-def arcade_abandon(sid: str) -> ArcadeSessionSummary:
+def arcade_abandon(sid: str, req: AbandonRequest | None = None) -> ArcadeSessionSummary:
+    secret = req.abandon_secret if req else None
     try:
-        return arcade_svc.abandon_arcade_session(sid)
+        return arcade_svc.abandon_arcade_session(sid, secret)
+    except PermissionError as e:
+        raise HTTPException(401, str(e)) from e
     except KeyError as e:
         raise HTTPException(404, str(e)) from e
     except ValueError as e:

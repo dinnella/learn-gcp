@@ -115,7 +115,8 @@ def test_summary_includes_per_exam_breakdown(client):
     body = _start(client)
     sid = body["session_id"]
     # Abandon immediately → summary still queryable
-    client.post(f"/api/progressive/sessions/{sid}/abandon")
+    client.post(f"/api/progressive/sessions/{sid}/abandon",
+                json={"abandon_secret": body["abandon_secret"]})
     r = client.get(f"/api/progressive/sessions/{sid}")
     assert r.status_code == 200
     s = r.json()
@@ -127,16 +128,21 @@ def test_score_submission_idempotent(client):
     body = _start(client)
     sid = body["session_id"]
     qid = body["first_question"]["id"]
+    token = None
     # Force end via 3 strikes
     for _ in range(5):
         wrong = _wrong_index_for(client, sid, qid)
         r = _answer(client, sid, qid, wrong)
         d = r.json()
         if d["ended"]:
+            token = d["submit_token"]
             break
         qid = d["next_question"]["id"]
-    client.post(f"/api/progressive/sessions/{sid}/score", json={"player_name": "Dup"})
-    client.post(f"/api/progressive/sessions/{sid}/score", json={"player_name": "Dup"})
+    assert token
+    client.post(f"/api/progressive/sessions/{sid}/score",
+                json={"player_name": "Dup", "submit_token": token})
+    client.post(f"/api/progressive/sessions/{sid}/score",
+                json={"player_name": "Dup", "submit_token": token})
     lb = client.get("/api/progressive/leaderboard").json()
     dup = [e for e in lb["entries"] if e["player_name"] == "Dup"]
     assert len(dup) == 1
@@ -147,14 +153,17 @@ def test_leaderboard_separate_from_classic(client):
     body = _start(client)
     sid = body["session_id"]
     qid = body["first_question"]["id"]
+    token = None
     for _ in range(5):
         wrong = _wrong_index_for(client, sid, qid)
         r = _answer(client, sid, qid, wrong)
         d = r.json()
         if d["ended"]:
+            token = d["submit_token"]
             break
         qid = d["next_question"]["id"]
-    client.post(f"/api/progressive/sessions/{sid}/score", json={"player_name": "ProgOnly"})
+    client.post(f"/api/progressive/sessions/{sid}/score",
+                json={"player_name": "ProgOnly", "submit_token": token})
     classic_lb = client.get("/api/leaderboard/architect").json()
     names = [e["player_name"] for e in classic_lb["entries"]]
     assert "ProgOnly" not in names
@@ -164,7 +173,8 @@ def test_abandon_marks_session_and_blocks_answer(client):
     body = _start(client)
     sid = body["session_id"]
     qid = body["first_question"]["id"]
-    r = client.post(f"/api/progressive/sessions/{sid}/abandon")
+    r = client.post(f"/api/progressive/sessions/{sid}/abandon",
+                    json={"abandon_secret": body["abandon_secret"]})
     assert r.status_code == 200
     assert r.json()["ended_reason"] == "abandoned"
     r2 = client.post(f"/api/progressive/sessions/{sid}/answer", json={
@@ -173,18 +183,29 @@ def test_abandon_marks_session_and_blocks_answer(client):
     assert r2.status_code == 400
 
 
+def test_abandon_rejected_without_secret(client):
+    body = _start(client)
+    sid = body["session_id"]
+    r = client.post(f"/api/progressive/sessions/{sid}/abandon", json={})
+    assert r.status_code == 401
+
+
 def test_abandoned_run_cannot_submit_score(client):
     body = _start(client)
     sid = body["session_id"]
-    client.post(f"/api/progressive/sessions/{sid}/abandon")
+    client.post(f"/api/progressive/sessions/{sid}/abandon",
+                json={"abandon_secret": body["abandon_secret"]})
     r = client.post(f"/api/progressive/sessions/{sid}/score",
-                    json={"player_name": "Cheater"})
+                    json={"player_name": "Cheater", "submit_token": "abandoned-no-token"})
     assert r.status_code == 400
 
 
 def test_abandon_idempotent(client):
     body = _start(client)
     sid = body["session_id"]
-    a = client.post(f"/api/progressive/sessions/{sid}/abandon").json()
-    b = client.post(f"/api/progressive/sessions/{sid}/abandon").json()
+    secret = body["abandon_secret"]
+    a = client.post(f"/api/progressive/sessions/{sid}/abandon",
+                    json={"abandon_secret": secret}).json()
+    b = client.post(f"/api/progressive/sessions/{sid}/abandon",
+                    json={"abandon_secret": secret}).json()
     assert a["ended_reason"] == b["ended_reason"] == "abandoned"

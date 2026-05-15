@@ -27,6 +27,12 @@ const state = {
   nextQuestion: null,
   playerName: localStorage.getItem("playerName") || "",
   lastSummary: null,
+  // One-time leaderboard submission token, issued by the server when the
+  // run legitimately ends. Without it /score returns 401.
+  submitToken: null,
+  // Per-session secret returned in the start response. Required to abandon
+  // the run; without it the abandon call returns 401.
+  abandonSecret: null,
   // Progressive
   scoreTotal: 0,
   strikes: 0,
@@ -255,6 +261,8 @@ async function startSession(body) {
   const data = await resp.json();
   state.mode = "classic";
   state.sessionId = data.session_id;
+  state.submitToken = null;
+  state.abandonSecret = data.abandon_secret || null;
   state.total = data.total;
   state.answered = 0;
   state.correct = 0;
@@ -441,6 +449,7 @@ async function onSubmitAnswer() {
 
   $("explanation").classList.remove("hidden");
   state.nextQuestion = data.next_question;
+  if (data.submit_token) state.submitToken = data.submit_token;
 }
 
 async function onNext() {
@@ -457,6 +466,7 @@ async function onNext() {
 async function renderResults() {
   const r = await (await fetch(`/api/sessions/${state.sessionId}`)).json();
   state.lastSummary = r;
+  if (r.submit_token) state.submitToken = r.submit_token;
 
   // Headline reacts to grade.
   const gradeLetter = r.report_card?.overall_grade;
@@ -572,7 +582,7 @@ async function onSubmitScore() {
   const resp = await fetch(`/api/sessions/${state.sessionId}/score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ player_name: name }),
+    body: JSON.stringify({ player_name: name, submit_token: state.submitToken }),
   });
   if (!resp.ok) {
     const j = await resp.json().catch(() => ({}));
@@ -671,6 +681,8 @@ async function startProgressiveSession() {
   const data = await resp.json();
   state.mode = "progressive";
   state.sessionId = data.session_id;
+  state.submitToken = null;
+  state.abandonSecret = data.abandon_secret || null;
   state.maxStrikes = data.max_strikes;
   state.strikes = 0;
   state.scoreTotal = 0;
@@ -747,6 +759,7 @@ async function onProgressiveAnswer() {
     state.nextQuestion = null;
     // After Next is clicked, render alt results.
     state._endedReason = data.ended_reason;
+    if (data.submit_token) state.submitToken = data.submit_token;
   } else {
     state.nextQuestion = data.next_question;
   }
@@ -755,6 +768,7 @@ async function onProgressiveAnswer() {
 async function loadProgressiveSummary() {
   const r = await (await fetch(`/api/progressive/sessions/${state.sessionId}`)).json();
   state.lastSummary = r;
+  if (r.submit_token) state.submitToken = r.submit_token;
   return r;
 }
 
@@ -790,6 +804,8 @@ async function startArcadeSession() {
   const data = await resp.json();
   state.mode = "arcade";
   state.sessionId = data.session_id;
+  state.submitToken = null;
+  state.abandonSecret = data.abandon_secret || null;
   state.timeRemainingMs = data.time_remaining_ms;
   state.level = 1;
   state.correctInLevel = 0;
@@ -896,6 +912,7 @@ async function onArcadeAnswer() {
 
   if (data.ended) {
     stopArcadeTicker();
+    if (data.submit_token) state.submitToken = data.submit_token;
     setTimeout(() => loadArcadeSummaryAndShow(), 350);
     return;
   }
@@ -931,6 +948,7 @@ async function onArcadeContinue() {
 async function loadArcadeSummaryAndShow() {
   const r = await (await fetch(`/api/arcade/sessions/${state.sessionId}`)).json();
   state.lastSummary = r;
+  if (r.submit_token) state.submitToken = r.submit_token;
   renderAltResults(r);
 }
 
@@ -985,7 +1003,11 @@ async function onAbandonRun() {
   const path = state.mode === "arcade" ? "arcade" : "progressive";
   stopArcadeTicker();
   trackEvent("game_abandoned", { mode: state.mode, answered: state.answered, score: state.scoreTotal });
-  await fetch(`/api/${path}/sessions/${state.sessionId}/abandon`, { method: "POST" }).catch(() => {});
+  await fetch(`/api/${path}/sessions/${state.sessionId}/abandon`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ abandon_secret: state.abandonSecret }),
+  }).catch(() => {});
   if (path === "arcade") return loadArcadeSummaryAndShow();
   const r = await loadProgressiveSummary();
   renderAltResults(r);
@@ -1112,7 +1134,7 @@ async function onAltSubmitScore() {
   const resp = await fetch(`/api/${path}/sessions/${state.sessionId}/score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ player_name: name }),
+    body: JSON.stringify({ player_name: name, submit_token: state.submitToken }),
   });
   if (!resp.ok) {
     const j = await resp.json().catch(() => ({}));

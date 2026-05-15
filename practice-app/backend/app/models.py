@@ -61,6 +61,9 @@ class AnswerResponse(BaseModel):
     doc_links: list[DocLink] = Field(default_factory=list)
     next_question: QuestionForClient | None = None
     progress: dict
+    # One-time leaderboard submission token, only present on the answer
+    # that finishes the session.
+    submit_token: str | None = None
 
 
 class ReportCardRecommendation(BaseModel):
@@ -92,12 +95,19 @@ class SessionSummary(BaseModel):
     per_difficulty: dict[str, dict]
     player_name: str | None = None
     report_card: ReportCard | None = None
+    # Echoed so a client that reloads after finishing can still submit a score.
+    # Cleared once the token has been spent on /score.
+    submit_token: str | None = None
 
 
 class SessionStartResponse(BaseModel):
     session_id: str
     total: int
     first_question: QuestionForClient
+    # Per-session secret returned exactly once. Required to abandon the
+    # run later. Stops a third party who only knows the session ID from
+    # griefing the player by abandoning their session.
+    abandon_secret: str | None = None
 
 
 class ScoreEntry(BaseModel):
@@ -133,6 +143,7 @@ class ProgressiveSessionStartResponse(BaseModel):
     mode: SessionMode = "progressive"
     max_strikes: int
     first_question: QuestionForClient
+    abandon_secret: str | None = None
 
 
 class ProgressiveAnswerResponse(BaseModel):
@@ -145,6 +156,7 @@ class ProgressiveAnswerResponse(BaseModel):
     progress: dict
     ended: bool = False
     ended_reason: ProgressiveEndedReason | None = None
+    submit_token: str | None = None
 
 
 class ProgressiveSessionSummary(BaseModel):
@@ -165,6 +177,7 @@ class ProgressiveSessionSummary(BaseModel):
     per_exam: dict[str, dict]
     percentile: float | None = None
     player_name: str | None = None
+    submit_token: str | None = None
 
 
 class ProgressiveScoreEntry(BaseModel):
@@ -215,6 +228,7 @@ class ArcadeSessionStartResponse(BaseModel):
     starting_seconds: int
     time_remaining_ms: int
     first_question: ArcadeQuestionForClient
+    abandon_secret: str | None = None
 
 
 class ArcadeAnswerRequest(BaseModel):
@@ -243,6 +257,7 @@ class ArcadeAnswerResponse(BaseModel):
     level_up_pending: bool = False
     ended: bool = False
     ended_reason: ArcadeEndedReason | None = None
+    submit_token: str | None = None
 
 
 class ArcadeContinueResponse(BaseModel):
@@ -267,6 +282,7 @@ class ArcadeSessionSummary(BaseModel):
     per_exam: dict[str, dict]
     ended_reason: ArcadeEndedReason | None
     player_name: str | None = None
+    submit_token: str | None = None
 
 
 class ArcadeScoreEntry(BaseModel):

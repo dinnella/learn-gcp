@@ -102,6 +102,32 @@ def test_session_ends_when_time_runs_out(client):
     assert d["time_remaining_ms"] == 0
 
 
+def test_client_cannot_underreport_elapsed_time(client, monkeypatch):
+    """A scripted client sending client_elapsed_ms=0 must still be debited
+    for the wallclock time the server measured since the previous tick."""
+    body = client.post("/api/arcade/sessions", json={"starting_seconds": 60}).json()
+    sid = body["session_id"]
+    fq = body["first_question"]
+
+    # Backdate last_tick_at so the server measures ~10s of elapsed time.
+    from app.db import get_db, SESSIONS
+    from datetime import datetime, timedelta, timezone
+    backdated = (datetime.now(timezone.utc) - timedelta(seconds=10)).isoformat()
+    get_db().collection(SESSIONS).document(sid).update({"last_tick_at": backdated})
+
+    # Cheating client claims 0 ms elapsed.
+    correct = _correct_index_for(sid, fq["id"])
+    r = client.post(f"/api/arcade/sessions/{sid}/answer", json={
+        "question_id": fq["id"], "selected_index": correct,
+        "confidence": "confident", "client_elapsed_ms": 0,
+    }).json()
+    # Server-measured elapsed (~10000 ms) is debited even though the client
+    # claimed 0. Bonus is then added back for the correct answer.
+    expected_bonus_ms = fq["time_bonus_seconds"] * 1000
+    # Allow ~100ms slop for test timing.
+    assert 60000 - 10000 + expected_bonus_ms - 200 <= r["time_remaining_ms"] <= 60000 - 10000 + expected_bonus_ms + 200
+
+
 def _answer_correct(client, sid, qid):
     correct = _correct_index_for(sid, qid)
     return client.post(f"/api/arcade/sessions/{sid}/answer", json={
@@ -158,7 +184,8 @@ def test_continue_rejected_when_no_pending(client):
 def test_summary_includes_level_and_streak(client):
     body = client.post("/api/arcade/sessions", json={}).json()
     sid = body["session_id"]
-    client.post(f"/api/arcade/sessions/{sid}/abandon")
+    client.post(f"/api/arcade/sessions/{sid}/abandon",
+                json={"abandon_secret": body["abandon_secret"]})
     s = client.get(f"/api/arcade/sessions/{sid}").json()
     assert "level_reached" in s
     assert "max_streak" in s
@@ -170,12 +197,16 @@ def test_score_submission_idempotent(client):
     sid = body["session_id"]
     qid = body["first_question"]["id"]
     # Run timer down
-    client.post(f"/api/arcade/sessions/{sid}/answer", json={
+    end = client.post(f"/api/arcade/sessions/{sid}/answer", json={
         "question_id": qid, "selected_index": 0,
         "confidence": "guess", "client_elapsed_ms": 60000,
-    })
-    client.post(f"/api/arcade/sessions/{sid}/score", json={"player_name": "Dup"})
-    client.post(f"/api/arcade/sessions/{sid}/score", json={"player_name": "Dup"})
+    }).json()
+    token = end["submit_token"]
+    assert token
+    client.post(f"/api/arcade/sessions/{sid}/score",
+                json={"player_name": "Dup", "submit_token": token})
+    client.post(f"/api/arcade/sessions/{sid}/score",
+                json={"player_name": "Dup", "submit_token": token})
     lb = client.get("/api/arcade/leaderboard").json()
     dup = [e for e in lb["entries"] if e["player_name"] == "Dup"]
     assert len(dup) == 1
@@ -185,7 +216,9 @@ def test_abandon_marks_session_and_blocks_answer(client):
     body = client.post("/api/arcade/sessions", json={}).json()
     sid = body["session_id"]
     qid = body["first_question"]["id"]
-    r = client.post(f"/api/arcade/sessions/{sid}/abandon")
+    secret = body["abandon_secret"]
+    r = client.post(f"/api/arcade/sessions/{sid}/abandon",
+                    json={"abandon_secret": secret})
     assert r.status_code == 200
     assert r.json()["ended_reason"] == "abandoned"
     r2 = client.post(f"/api/arcade/sessions/{sid}/answer", json={
@@ -195,18 +228,35 @@ def test_abandon_marks_session_and_blocks_answer(client):
     assert r2.status_code == 400
 
 
+def test_abandon_rejected_without_secret(client):
+    """Without the per-session abandon secret a third party with the sid
+    cannot grief the player by abandoning their run."""
+    body = client.post("/api/arcade/sessions", json={}).json()
+    sid = body["session_id"]
+    r = client.post(f"/api/arcade/sessions/{sid}/abandon", json={})
+    assert r.status_code == 401
+    r2 = client.post(f"/api/arcade/sessions/{sid}/abandon",
+                     json={"abandon_secret": "wrong"})
+    assert r2.status_code == 401
+
+
 def test_abandoned_run_cannot_submit_score(client):
     body = client.post("/api/arcade/sessions", json={}).json()
     sid = body["session_id"]
-    client.post(f"/api/arcade/sessions/{sid}/abandon")
+    client.post(f"/api/arcade/sessions/{sid}/abandon",
+                json={"abandon_secret": body["abandon_secret"]})
     r = client.post(f"/api/arcade/sessions/{sid}/score",
-                    json={"player_name": "Cheater"})
+                    json={"player_name": "Cheater",
+                          "submit_token": "abandoned-no-token"})
     assert r.status_code == 400
 
 
 def test_abandon_idempotent(client):
     body = client.post("/api/arcade/sessions", json={}).json()
     sid = body["session_id"]
-    a = client.post(f"/api/arcade/sessions/{sid}/abandon").json()
-    b = client.post(f"/api/arcade/sessions/{sid}/abandon").json()
+    secret = body["abandon_secret"]
+    a = client.post(f"/api/arcade/sessions/{sid}/abandon",
+                    json={"abandon_secret": secret}).json()
+    b = client.post(f"/api/arcade/sessions/{sid}/abandon",
+                    json={"abandon_secret": secret}).json()
     assert a["ended_reason"] == b["ended_reason"] == "abandoned"

@@ -233,12 +233,15 @@ def test_submit_score_and_appears_on_leaderboard(client):
         "question_id": q1_id, "selected_index": 0, "confidence": "confident",
     })
     q2 = r1.json()["next_question"]
-    client.post(f"/api/sessions/{sid}/answer", json={
+    end = client.post(f"/api/sessions/{sid}/answer", json={
         "question_id": q2["id"], "selected_index": 0, "confidence": "narrowed",
-    })
+    }).json()
+    token = end["submit_token"]
+    assert token
 
     r_score = client.post(f"/api/sessions/{sid}/score",
-                          json={"player_name": "Testy McTestface"})
+                          json={"player_name": "Testy McTestface",
+                                "submit_token": token})
     assert r_score.status_code == 200
     entry = r_score.json()
     assert entry["player_name"] == "Testy McTestface"
@@ -260,12 +263,15 @@ def test_submit_score_idempotent(client):
         "question_id": q1_id, "selected_index": 0, "confidence": "confident",
     })
     q2 = r1.json()["next_question"]
-    client.post(f"/api/sessions/{sid}/answer", json={
+    end = client.post(f"/api/sessions/{sid}/answer", json={
         "question_id": q2["id"], "selected_index": 0, "confidence": "narrowed",
-    })
+    }).json()
+    token = end["submit_token"]
 
-    client.post(f"/api/sessions/{sid}/score", json={"player_name": "Dup"})
-    client.post(f"/api/sessions/{sid}/score", json={"player_name": "Dup"})
+    client.post(f"/api/sessions/{sid}/score",
+                json={"player_name": "Dup", "submit_token": token})
+    client.post(f"/api/sessions/{sid}/score",
+                json={"player_name": "Dup", "submit_token": token})
 
     lb = client.get("/api/leaderboard/architect").json()
     dup_entries = [e for e in lb["entries"] if e["player_name"] == "Dup"]

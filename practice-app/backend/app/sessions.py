@@ -19,6 +19,14 @@ from .models import (
 )
 from .questions import get_question_full, sample_question_ids
 from .section_titles import title_for
+from .tokens import (
+    hash_submit_token,
+    mint_session_secret,
+    mint_submit_token,
+    secret_matches,
+    token_expired,
+    token_hash_matches,
+)
 
 
 PASS_THRESHOLD = 70.0       # % considered "passing" on a mock
@@ -62,8 +70,11 @@ def start_session(
             f"No questions for exam={exam} sections={sections} difficulties={difficulties}. "
             "Try widening filters or run `make seed`."
         )
-    sid = uuid.uuid4().hex[:12]
+    # Full uuid hex = 128 bits of entropy. Truncating to 12 hex chars (48 bits)
+    # made session IDs guessable enough to grief other players via /abandon.
+    sid = uuid.uuid4().hex
     option_orders = _build_option_orders(qids)
+    abandon_secret_raw, abandon_secret_hash = mint_session_secret()
     doc = {
         "exam": exam,
         "started_at": _now_iso(),
@@ -73,6 +84,7 @@ def start_session(
         "answers": [],
         "player_name": player_name,
         "filters": {"sections": sections, "difficulties": difficulties},
+        "abandon_secret_hash": abandon_secret_hash,
     }
     get_db().collection(SESSIONS).document(sid).set(doc)
     return {
@@ -80,6 +92,7 @@ def start_session(
         "total": len(qids),
         "first_qid": qids[0],
         "first_order": option_orders[qids[0]],
+        "abandon_secret": abandon_secret_raw,
     }
 
 
@@ -137,8 +150,17 @@ def record_answer(
     total = len(session["question_ids"])
     finished = answered >= total
     update: dict = {"answers": firestore.ArrayUnion([new_answer])}
+    submit_token: str | None = None
     if finished:
         update["finished_at"] = _now_iso()
+        submit_token, expires = mint_submit_token()
+        # Store ONLY the sha256 hash of the raw token. The raw value is
+        # returned to the client exactly once (in this answer response) and
+        # is never readable from the session document by anyone who later
+        # learns the session ID.
+        update["submit_token_hash"] = hash_submit_token(submit_token)
+        update["submit_token_expires_at"] = expires
+        update["submit_token_used"] = False
     ref.update(update)
 
     next_qid = session["question_ids"][answered] if not finished else None
@@ -154,6 +176,7 @@ def record_answer(
         "next_order": next_order,
         "answered": answered,
         "total": total,
+        "submit_token": submit_token,
     }
 
 
@@ -280,6 +303,12 @@ def summary(sid: str) -> SessionSummary | None:
         per_difficulty=per_difficulty,
         player_name=s.get("player_name"),
         report_card=report_card,
+        # Tokens are intentionally NOT echoed from the summary endpoint.
+        # The raw token is delivered exactly once (in the final /answer
+        # response) and lives only in the client's memory after that. This
+        # closes the leak where anyone who learned the session ID could GET
+        # the summary and steal the token.
+        submit_token=None,
     )
 
 
@@ -287,13 +316,28 @@ def summary(sid: str) -> SessionSummary | None:
 # Leaderboard
 # ------------------------------------------------------------------
 
-def submit_score(sid: str, player_name: str) -> ScoreEntry:
+def submit_score(sid: str, player_name: str, submit_token: str) -> ScoreEntry:
     db = get_db()
     s = _load(sid)
     if s is None:
         raise KeyError("session not found")
     if not s.get("finished_at"):
         raise ValueError("session not finished — finish all questions first")
+
+    # --- Eligibility token: write-once leaderboard protection -------------
+    stored_hash = s.get("submit_token_hash")
+    expires = s.get("submit_token_expires_at")
+    if not token_hash_matches(stored_hash, submit_token):
+        raise PermissionError("invalid submit_token")
+    doc_id = hash_submit_token(submit_token)
+    existing = db.collection(SCORES).document(doc_id).get()
+    if existing.exists:
+        # Token already spent on a prior call — return the original entry
+        # so legitimate retries (network blips) stay idempotent. The original
+        # entry can never be modified.
+        return ScoreEntry(**existing.to_dict())
+    if token_expired(expires):
+        raise PermissionError("submit_token expired")
 
     answered = len(s["answers"])
     correct = sum(1 for a in s["answers"] if a["correct"])
@@ -316,10 +360,20 @@ def submit_score(sid: str, player_name: str) -> ScoreEntry:
         finished_at=s["finished_at"],
         session_id=sid,
     )
-    # Score docs are keyed by session_id so re-submission is idempotent.
-    db.collection(SCORES).document(sid).set(entry.model_dump())
-    # Mirror the player_name onto the session for convenience.
-    db.collection(SESSIONS).document(sid).update({"player_name": entry.player_name})
+    # Write-once: .create() raises if the doc already exists, so a stolen
+    # token can never overwrite an existing leaderboard entry.
+    try:
+        db.collection(SCORES).document(doc_id).create(entry.model_dump())
+    except Exception as e:
+        existing = db.collection(SCORES).document(doc_id).get()
+        if existing.exists:
+            return ScoreEntry(**existing.to_dict())
+        raise PermissionError("leaderboard write rejected") from e
+    # Burn the token and mirror the player_name onto the session.
+    db.collection(SESSIONS).document(sid).update({
+        "player_name": entry.player_name,
+        "submit_token_used": True,
+    })
     return entry
 
 

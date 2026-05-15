@@ -18,6 +18,14 @@ from .questions import (
     list_exams,
     pick_one_question,
 )
+from .tokens import (
+    hash_submit_token,
+    mint_session_secret,
+    mint_submit_token,
+    secret_matches,
+    token_expired,
+    token_hash_matches,
+)
 
 
 POINTS = {"easy": 1, "medium": 2, "hard": 4}
@@ -81,8 +89,9 @@ def start_progressive_session(player_name: str | None, max_strikes: int) -> dict
     if first_q is None:
         raise ValueError("no questions available")
 
-    sid = uuid.uuid4().hex[:12]
+    sid = uuid.uuid4().hex
     order = _shuffled_options_for(first_q.id)
+    abandon_secret_raw, abandon_secret_hash = mint_session_secret()
     doc = {
         "mode": "progressive",
         "exams": exams,
@@ -100,12 +109,14 @@ def start_progressive_session(player_name: str | None, max_strikes: int) -> dict
         "current_streak": 0,
         "max_streak": 0,
         "ended_reason": None,
+        "abandon_secret_hash": abandon_secret_hash,
     }
     get_db().collection(SESSIONS).document(sid).set(doc)
     return {
         "session_id": sid,
         "max_strikes": max_strikes,
         "first_question": _question_for_client_dict(first_q, order),
+        "abandon_secret": abandon_secret_raw,
     }
 
 
@@ -216,6 +227,13 @@ def record_progressive_answer(
     if ended:
         update["finished_at"] = _now_iso()
         update["ended_reason"] = ended_reason
+        submit_token, expires = mint_submit_token()
+        # Persist only the hash; raw token is returned to the client once.
+        update["submit_token_hash"] = hash_submit_token(submit_token)
+        update["submit_token_expires_at"] = expires
+        update["submit_token_used"] = False
+    else:
+        submit_token = None
 
     ref.update(update)
 
@@ -240,6 +258,7 @@ def record_progressive_answer(
         },
         "ended": ended,
         "ended_reason": ended_reason,
+        "submit_token": submit_token,
     }
 
 
@@ -251,7 +270,7 @@ def _fallback_order(target: str) -> list[str]:
     return ["medium", "hard"]
 
 
-def abandon_progressive_session(sid: str) -> ProgressiveSessionSummary:
+def abandon_progressive_session(sid: str, abandon_secret: str | None = None) -> ProgressiveSessionSummary:
     db = get_db()
     ref = db.collection(SESSIONS).document(sid)
     snap = ref.get()
@@ -260,6 +279,11 @@ def abandon_progressive_session(sid: str) -> ProgressiveSessionSummary:
     session = snap.to_dict()
     if session.get("mode") != "progressive":
         raise ValueError("not a progressive session")
+    # Require the per-session abandon secret so a third party who only
+    # knows the session ID cannot grief the player by abandoning their run.
+    stored_abandon_hash = session.get("abandon_secret_hash")
+    if stored_abandon_hash and not secret_matches(stored_abandon_hash, abandon_secret):
+        raise PermissionError("invalid abandon_secret")
     finished = session.get("finished_at")
     if finished and session.get("ended_reason") != "abandoned":
         raise ValueError("session already finished")
@@ -324,6 +348,9 @@ def progressive_summary(sid: str) -> ProgressiveSessionSummary | None:
         per_exam=dict(per_exam),
         percentile=percentile,
         player_name=s.get("player_name"),
+        # Tokens are not echoed from summary; raw token only ever lives in
+        # the answer response that ends the run.
+        submit_token=None,
     )
 
 
@@ -345,7 +372,7 @@ def _percentile(score_total: int) -> float:
     return round(100.0 * beaten / len(scores), 1)
 
 
-def submit_progressive_score(sid: str, player_name: str) -> ProgressiveScoreEntry:
+def submit_progressive_score(sid: str, player_name: str, submit_token: str) -> ProgressiveScoreEntry:
     db = get_db()
     s = _load(sid)
     if s is None or s.get("mode") != "progressive":
@@ -354,6 +381,17 @@ def submit_progressive_score(sid: str, player_name: str) -> ProgressiveScoreEntr
         raise ValueError("session not finished")
     if s.get("ended_reason") == "abandoned":
         raise ValueError("Abandoned runs cannot be submitted")
+
+    stored_hash = s.get("submit_token_hash")
+    expires = s.get("submit_token_expires_at")
+    if not token_hash_matches(stored_hash, submit_token):
+        raise PermissionError("invalid submit_token")
+    doc_id = hash_submit_token(submit_token)
+    existing = db.collection(PROGRESSIVE_SCORES).document(doc_id).get()
+    if existing.exists:
+        return ProgressiveScoreEntry(**existing.to_dict())
+    if token_expired(expires):
+        raise PermissionError("submit_token expired")
 
     answers = s.get("answers", [])
     answered = len(answers)
@@ -383,8 +421,17 @@ def submit_progressive_score(sid: str, player_name: str) -> ProgressiveScoreEntr
         finished_at=s["finished_at"],
         session_id=sid,
     )
-    db.collection(PROGRESSIVE_SCORES).document(sid).set(entry.model_dump())
-    db.collection(SESSIONS).document(sid).update({"player_name": entry.player_name})
+    try:
+        db.collection(PROGRESSIVE_SCORES).document(doc_id).create(entry.model_dump())
+    except Exception as e:
+        existing = db.collection(PROGRESSIVE_SCORES).document(doc_id).get()
+        if existing.exists:
+            return ProgressiveScoreEntry(**existing.to_dict())
+        raise PermissionError("leaderboard write rejected") from e
+    db.collection(SESSIONS).document(sid).update({
+        "player_name": entry.player_name,
+        "submit_token_used": True,
+    })
     return entry
 
 
