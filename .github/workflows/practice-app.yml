@@ -40,6 +40,23 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          # depth 2 so we can diff HEAD vs HEAD^ to detect backend changes
+          fetch-depth: 2
+
+      # Detect whether any backend source changed in this push.
+      # If only infra / e2e / docs changed we reuse the currently-running image
+      # instead of building a new one — avoiding an unnecessary scan charge.
+      - name: Detect backend changes
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only HEAD^ HEAD -- practice-app/backend/ 2>/dev/null || echo "UNKNOWN")
+          if [[ "$CHANGED" == "UNKNOWN" ]] || [[ -n "$CHANGED" ]]; then
+            echo "build=true"  >> "$GITHUB_OUTPUT"
+            echo "Backend changed (or first commit) — will build a new image."
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "Backend unchanged — will reuse the current image."
+          fi
 
       - uses: google-github-actions/auth@v3
         with:
@@ -79,15 +96,32 @@ jobs:
             -var "restrict_ingress_to_lb=${{ vars.RESTRICT_INGRESS_TO_LB || 'false' }}"
 
       # 2) Build & push the container image to Artifact Registry.
+      #    Skipped when only infra/e2e/docs changed — saves one scan charge.
       - name: Configure docker for AR
+        if: steps.changes.outputs.build == 'true'
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       - name: Build and push image
+        if: steps.changes.outputs.build == 'true'
         working-directory: practice-app/backend
         run: |
           IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE }}:${{ github.sha }}"
           docker build --target runtime -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
+          echo "IMAGE_URI=$IMAGE_URI" >> "$GITHUB_ENV"
+
+      # When the backend didn't change, reuse whichever image Cloud Run is already running.
+      - name: Reuse current image (backend unchanged)
+        if: steps.changes.outputs.build == 'false'
+        run: |
+          IMAGE_URI=$(gcloud run services describe "${{ env.IMAGE }}" \
+            --region="${{ env.REGION }}" \
+            --format="value(spec.template.spec.containers[0].image)" 2>/dev/null || echo "")
+          if [[ -z "$IMAGE_URI" ]]; then
+            echo "::error::Could not determine current image URI — service may not exist yet. Run a full deploy first."
+            exit 1
+          fi
+          echo "Reusing image: $IMAGE_URI"
           echo "IMAGE_URI=$IMAGE_URI" >> "$GITHUB_ENV"
 
       # 3) Rolling deploy via gcloud — zero-downtime.
