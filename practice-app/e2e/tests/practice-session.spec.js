@@ -3,6 +3,16 @@ const { test, expect } = require('@playwright/test');
 const path = require('path');
 
 // ---------------------------------------------------------------------------
+// Helper: wait until init() has finished wiring up event listeners. The app
+// awaits /api/health and /api/exams before attaching click handlers, so a
+// click that lands before this signal is silently dropped.
+// ---------------------------------------------------------------------------
+async function gotoReady(page, url = '/') {
+  await page.goto(url);
+  await page.waitForFunction(() => document.body.dataset.appReady === 'true', { timeout: 15_000 });
+}
+
+// ---------------------------------------------------------------------------
 // Helper: wait for a stable app state — either results screen is visible,
 // or there is a fresh (non-disabled) answer option on screen.
 // ---------------------------------------------------------------------------
@@ -22,7 +32,7 @@ async function waitForStableState(page, timeout = 15_000) {
 // Test 1 — Home page smoke test
 // ---------------------------------------------------------------------------
 test('home page loads with all key elements', async ({ page }) => {
-  await page.goto('/');
+  await gotoReady(page);
 
   await expect(page.locator('h1')).toContainText('LevelUp');
   await expect(page.locator('#quick-start-btn')).toBeVisible();
@@ -44,7 +54,7 @@ test('home page loads with all key elements', async ({ page }) => {
 // Test 2 — Full practice session → report card → leaderboard
 // ---------------------------------------------------------------------------
 test('completes a 5-question PCA session and saves score to leaderboard', async ({ page }) => {
-  await page.goto('/');
+  await gotoReady(page);
 
   // ------------------------------------------------------------------
   // Start a 5-question custom session via the Advanced panel
@@ -150,7 +160,7 @@ test('completes a 5-question PCA session and saves score to leaderboard', async 
 // Test 3 — Quick-start button
 // ---------------------------------------------------------------------------
 test('quick-start button starts a session immediately', async ({ page }) => {
-  await page.goto('/');
+  await gotoReady(page);
 
   await page.locator('#quick-start-btn').click();
 
@@ -171,7 +181,7 @@ test('quick-start button starts a session immediately', async ({ page }) => {
 // Test 4 — Report card: next_session_config can be used to start a new session
 // ---------------------------------------------------------------------------
 test('report card next-session button starts a follow-up session', async ({ page }) => {
-  await page.goto('/');
+  await gotoReady(page);
 
   // Start a 1-question session using the advanced form
   await page.locator('details.adv > summary').click();

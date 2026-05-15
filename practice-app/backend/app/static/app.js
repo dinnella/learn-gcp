@@ -71,6 +71,9 @@ async function init() {
       loadLeaderboard(tab.dataset.exam);
     });
   }
+
+  // Signal to e2e tests (and anyone watching) that all event listeners are wired up.
+  document.body.dataset.appReady = "true";
 }
 
 let _examCache = null;
