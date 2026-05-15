@@ -37,8 +37,8 @@ test('home page loads with all key elements', async ({ page }) => {
   await expect(page.locator('h1')).toContainText('LevelUp');
   await expect(page.locator('#quick-start-btn')).toBeVisible();
 
-  // Exam selector shows PCA as default active tab — assert by data attribute, not display label
-  await expect(page.locator('#exam-seg button[data-exam="pca"]')).toHaveClass(/active/);
+  // Exam selector shows Architect as default active tab — assert by data attribute, not display label
+  await expect(page.locator('#exam-seg button[data-exam="architect"]')).toHaveClass(/active/);
 
   // Nav links are present
   await expect(page.locator('button[data-screen="leaderboard-screen"]')).toBeVisible();
@@ -53,7 +53,7 @@ test('home page loads with all key elements', async ({ page }) => {
 // ---------------------------------------------------------------------------
 // Test 2 — Full practice session → report card → leaderboard
 // ---------------------------------------------------------------------------
-test('completes a 5-question PCA session and saves score to leaderboard', async ({ page }) => {
+test('completes a 5-question Architect session and saves score to leaderboard', async ({ page }) => {
   await gotoReady(page);
 
   // ------------------------------------------------------------------
