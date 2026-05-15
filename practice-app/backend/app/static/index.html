@@ -18,7 +18,7 @@
     <meta name="twitter:title" content="Next3k LevelUp — GCP Cert Practice" />
     <meta name="twitter:description" content="10 scenario questions. Live grading. Real exam topics. PCA + DevOps Engineer." />
     <meta name="twitter:image" content="https://levelup.next3k.com/static/og-image.svg" />
-    <link rel="stylesheet" href="/static/styles.css?v=3" />
+    <link rel="stylesheet" href="/static/styles.css?v=7" />
   </head>
   <body>
     <header>
@@ -45,19 +45,28 @@
             <h2>Level up your Google Cloud game.</h2>
             <p class="hero-sub">10 questions between you and bragging rights. No pressure.</p>
 
-            <div class="hero-cta">
-              <button id="quick-start-btn" class="cta-primary">▶ Start Playing</button>
-              <p class="muted small">Defaults to <strong>Cloud Architect</strong> · 10 questions · medium difficulty.</p>
+            <div class="mode-tabs" id="mode-tabs" role="tablist" aria-label="Game mode">
+              <button data-mode="classic" class="active" type="button">📝 Classic <span class="mode-sub">10 questions</span></button>
+              <button data-mode="progressive" type="button">📈 Progressive <span class="mode-sub">3 strikes</span></button>
+              <button data-mode="arcade" type="button">⚡ Arcade <span class="mode-sub">2-min sprint</span></button>
             </div>
 
-            <div class="hero-switch">
+            <div class="hero-cta">
+              <button id="quick-start-btn" class="cta-primary">▶ Start Playing</button>
+              <p class="muted small" id="hero-cta-sub">Defaults to <strong>Cloud Architect</strong> · 10 questions · medium difficulty.</p>
+            </div>
+
+            <div class="hero-switch" id="exam-switch">
               <label class="muted small">Exam:</label>
               <div class="seg" id="exam-seg">
-                <button data-exam="pca" class="active">Cloud Architect</button>
-                <button data-exam="devops">DevOps Engineer</button>
-                <button data-exam="genai">Gen AI Leader</button>
+                <button data-exam="pca" class="active" type="button">Cloud Architect</button>
+                <button data-exam="devops" type="button">DevOps Engineer</button>
+                <button data-exam="genai" type="button">Gen AI Leader</button>
               </div>
             </div>
+            <p class="muted small all-exams-note hidden" id="all-exams-note">
+              🌍 <strong>All exams in scope</strong> — questions are drawn from every loaded cert.
+            </p>
 
             <div class="hero-name">
               <input id="player-name" type="text" maxlength="32" placeholder="Player name (optional, for leaderboard)" />
@@ -66,7 +75,7 @@
         </div>
 
         <!-- Advanced -->
-        <details class="card adv">
+        <details class="card adv" id="adv-panel">
           <summary>⚙️ Advanced — pick your own topics &amp; difficulty</summary>
           <form id="start-form">
             <div class="row">
@@ -102,13 +111,29 @@
           <div class="hud-left">
             <span id="progress-text" class="hud-pill">Question 1 / 10</span>
             <span id="difficulty-badge" class="diff-badge"></span>
+            <span id="strikes-pill" class="hud-pill strikes hidden" title="Strikes remaining">
+              <span class="strike-slot" data-i="0">❤</span><span class="strike-slot" data-i="1">❤</span><span class="strike-slot" data-i="2">❤</span>
+            </span>
+            <span id="level-pill" class="hud-pill hidden">⚡ Lv <span id="level-n">1</span> · <span id="level-progress">0/10</span></span>
           </div>
           <div class="hud-right">
             <span id="streak-pill" class="streak hidden">🔥 <span id="streak-n">0</span> streak</span>
             <span id="score-pill" class="hud-pill score">⭐ <span id="score-n">0</span></span>
+            <button id="abandon-btn" class="ghost small-btn hidden" type="button" title="Quit and view results">Quit run</button>
           </div>
         </div>
-        <div class="bar"><div id="progress-fill"></div></div>
+        <div class="bar" id="progress-bar"><div id="progress-fill"></div></div>
+        <div id="arcade-clock" class="arcade-clock hidden">
+          <div class="arcade-clock-face">
+            <span id="timer-text">1:00</span>
+            <span class="arcade-clock-label">remaining</span>
+          </div>
+          <div class="timer-bar" id="timer-bar"><div id="timer-fill"></div></div>
+          <p class="arcade-rules muted small">
+            ✅ correct: <strong>+pts +time</strong> &nbsp;·&nbsp;
+            ❌ wrong: <strong style="color:var(--bad)">−10s</strong>
+          </p>
+        </div>
 
         <p class="section-tag" id="q-section"></p>
         <h2 id="q-text"></h2>
@@ -122,6 +147,7 @@
         </fieldset>
 
         <button id="submit-btn" class="cta-primary" disabled>Lock it in 🔒</button>
+        <div id="point-toast-stage" class="toast-stage"></div>
 
         <div id="explanation" class="hidden">
           <p id="verdict" class="verdict"></p>
@@ -131,7 +157,67 @@
         </div>
       </section>
 
-      <!-- ---------- results / report card ---------- -->
+      <!-- ---------- level-up modal (arcade) ---------- -->
+      <div id="level-up-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lvl-title">
+        <div class="modal-card">
+          <h2 id="lvl-title">⚡ Level <span id="lvl-new">2</span>!</h2>
+          <p class="muted">10 in a row. The mix gets harder, the timer resets to <strong id="lvl-reset">110s</strong>.</p>
+          <div class="modal-actions">
+            <button id="lvl-continue-btn" class="cta-primary" type="button">Continue ▶</button>
+            <button id="lvl-quit-btn" class="ghost" type="button">Quit run</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- progressive / arcade results ---------- -->
+      <section id="alt-results-screen" class="card hidden">
+        <div id="alt-confetti-stage"></div>
+        <div class="results-header">
+          <div>
+            <p class="eyebrow" id="alt-headline">Run complete</p>
+            <h2 id="alt-title">Your run</h2>
+            <p class="muted" id="alt-meta"></p>
+          </div>
+          <div class="grade-block">
+            <div id="alt-score-big" class="grade big-num">—</div>
+            <div id="alt-score-sub" class="pass-pill"></div>
+          </div>
+        </div>
+
+        <div class="score-row" id="alt-stats"></div>
+
+        <div id="alt-percentile-block" class="percentile-block hidden">
+          <p class="eyebrow">Percentile</p>
+          <p><strong id="alt-percentile">—</strong> — you beat or tied <span id="alt-percentile-pct">—</span> of saved runs.</p>
+        </div>
+
+        <h3>By difficulty</h3>
+        <table id="alt-difficulty-table">
+          <thead><tr><th>Difficulty</th><th>Correct</th><th>Pts</th></tr></thead>
+          <tbody></tbody>
+        </table>
+
+        <h3>By exam</h3>
+        <table id="alt-exam-table">
+          <thead><tr><th>Exam</th><th>Correct</th><th>Pts</th></tr></thead>
+          <tbody></tbody>
+        </table>
+
+        <h3 id="alt-save-heading">🏆 Save your score</h3>
+        <div id="alt-score-submit-block">
+          <input id="alt-score-name" type="text" maxlength="32" placeholder="Player name" />
+          <button id="alt-submit-score-btn" class="cta-primary" type="button">Save to leaderboard</button>
+          <p id="alt-score-submit-msg" class="muted small"></p>
+        </div>
+
+        <div class="next-suggestion">
+          <p>Want another shot?</p>
+          <button id="alt-replay-btn" class="cta-primary" type="button">▶ Play again</button>
+          <button id="alt-home-btn" class="ghost" type="button">Back home</button>
+        </div>
+      </section>
+
+      <!-- ---------- results / report card (classic) ---------- -->
       <section id="results-screen" class="card hidden">
         <div id="confetti-stage"></div>
 
@@ -192,19 +278,24 @@
       <!-- ---------- leaderboard ---------- -->
       <section id="leaderboard-screen" class="card hidden">
         <h2>🏆 High scores</h2>
-        <div class="tabs">
-          <button class="tab active" data-exam="pca">Cloud Architect</button>
-          <button class="tab" data-exam="devops">DevOps Engineer</button>
-          <button class="tab" data-exam="genai">Gen AI Leader</button>
+        <div class="tabs mode-leaderboard-tabs" id="lb-mode-tabs">
+          <button class="tab active" data-lb-mode="classic" type="button">📝 Classic</button>
+          <button class="tab" data-lb-mode="progressive" type="button">📈 Progressive</button>
+          <button class="tab" data-lb-mode="arcade" type="button">⚡ Arcade</button>
+        </div>
+        <div class="tabs" id="lb-exam-tabs">
+          <button class="tab active" data-exam="pca" type="button">Cloud Architect</button>
+          <button class="tab" data-exam="devops" type="button">DevOps Engineer</button>
+          <button class="tab" data-exam="genai" type="button">Gen AI Leader</button>
         </div>
         <table id="lb-table">
-          <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Mix</th><th>When</th></tr></thead>
+          <thead id="lb-thead"><tr><th>#</th><th>Player</th><th>Score</th><th>Mix</th><th>When</th></tr></thead>
           <tbody></tbody>
         </table>
         <p id="lb-empty" class="muted hidden">No scores yet. Someone has to be first. Don't be shy.</p>
       </section>
     </main>
 
-    <script src="/static/app.js?v=3"></script>
+    <script src="/static/app.js?v=7"></script>
   </body>
 </html>

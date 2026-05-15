@@ -451,3 +451,220 @@ th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: u
   background: rgba(124,77,255,0.12); border-color: #9966ff;
   box-shadow: 0 0 14px rgba(124,77,255,0.25);
 }
+
+/* ============================================================
+   Mode picker
+   ============================================================ */
+.mode-tabs {
+  display: inline-flex; gap: 0.25rem; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 4px;
+  margin: 0.4rem 0 1.2rem;
+}
+.mode-tabs button {
+  background: transparent; border: 0; color: var(--muted);
+  padding: 0.55rem 1rem; border-radius: 999px;
+  font-weight: 600; font-size: 0.88rem; line-height: 1.1;
+  display: inline-flex; flex-direction: column; align-items: center; gap: 0.1rem;
+}
+.mode-tabs button .mode-sub {
+  font-size: 0.65rem; font-weight: 500; opacity: 0.75;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.mode-tabs button.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
+}
+.mode-tabs button:hover:not(.active) { color: var(--text); }
+
+/* ============================================================
+   Strikes (progressive)
+   ============================================================ */
+.hud-pill.strikes { color: var(--bad); border-color: rgba(234,67,53,0.45); letter-spacing: 0.1em; }
+.strike-slot {
+  display: inline-block; transition: transform 0.2s, opacity 0.2s, color 0.2s;
+  margin: 0 0.05rem;
+}
+.strike-slot.struck { color: var(--border); transform: scale(0.85); opacity: 0.5; }
+
+/* ============================================================
+   Timer bar (arcade)
+   ============================================================ */
+.timer-bar {
+  position: relative;
+  height: 18px; background: var(--border); border-radius: 999px;
+  overflow: hidden; margin-bottom: 1rem;
+  border: 1px solid var(--border);
+}
+#timer-fill {
+  position: absolute; inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--good), var(--accent));
+  width: 100%; transition: width 0.1s linear, background 0.2s;
+}
+.timer-bar.warn #timer-fill { background: linear-gradient(90deg, var(--warn), var(--gold)); }
+.timer-bar.danger #timer-fill {
+  background: linear-gradient(90deg, var(--bad), var(--warn));
+  animation: timer-pulse 0.6s ease-in-out infinite;
+}
+@keyframes timer-pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+#timer-text {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: ui-monospace, monospace; font-weight: 700;
+  font-size: 0.78rem; color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* In-quiz quit button */
+.small-btn { padding: 0.3rem 0.7rem; font-size: 0.75rem; }
+
+/* ============================================================
+   Point toast
+   ============================================================ */
+.toast-stage {
+  position: relative; height: 0; pointer-events: none;
+}
+.point-toast {
+  position: absolute; right: 0; top: -1.6rem;
+  padding: 0.3rem 0.75rem; border-radius: 999px;
+  background: linear-gradient(135deg, var(--gold), var(--warn));
+  color: #2b1a00; font-weight: 700; font-size: 0.95rem;
+  white-space: nowrap;
+  animation: toast-rise 1.1s ease-out forwards;
+  box-shadow: 0 4px 16px rgba(255,213,74,0.5);
+}
+@keyframes toast-rise {
+  0%   { transform: translateY(0);    opacity: 0; }
+  15%  { transform: translateY(-8px); opacity: 1; }
+  100% { transform: translateY(-60px); opacity: 0; }
+}
+
+/* ============================================================
+   Level-up modal
+   ============================================================ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(11,14,26,0.78);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 1rem;
+}
+.modal-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 2rem;
+  max-width: 420px; width: 100%; text-align: center;
+  box-shadow: 0 12px 60px rgba(124,77,255,0.35);
+  animation: modal-pop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes modal-pop {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.modal-card h2 {
+  margin: 0 0 0.5rem; font-size: 1.8rem;
+  background: linear-gradient(135deg, var(--gold), var(--accent));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.modal-actions {
+  display: flex; gap: 0.6rem; justify-content: center; margin-top: 1.2rem;
+}
+
+/* ============================================================
+   Alt results
+   ============================================================ */
+.grade.big-num {
+  font-family: ui-monospace, monospace;
+  font-size: 1.6rem; line-height: 80px;
+  color: var(--gold); border-color: var(--gold);
+  box-shadow: 0 0 24px rgba(255,213,74,0.35);
+}
+.percentile-block {
+  margin: 1rem 0; padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, rgba(124,77,255,0.12), rgba(66,133,244,0.12));
+  border: 1px solid rgba(124,77,255,0.3);
+  border-radius: var(--radius);
+}
+.percentile-block p { margin: 0.2rem 0; }
+
+#alt-score-submit-block {
+  display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+}
+#alt-score-submit-block input {
+  padding: 0.55rem 0.7rem; background: #0e1320; border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-size: 0.95rem; min-width: 200px;
+}
+
+/* ============================================================
+   Leaderboard mode tabs
+   ============================================================ */
+.mode-leaderboard-tabs { margin-bottom: 0.5rem; }
+
+.all-exams-note {
+  display: inline-block; margin: 0.4rem 0 1rem;
+  padding: 0.4rem 0.85rem; border-radius: 999px;
+  background: rgba(124,77,255,0.12); color: var(--text);
+  border: 1px solid rgba(124,77,255,0.35);
+}
+
+/* ============================================================
+   Arcade clock — big prominent timer above the question
+   ============================================================ */
+.arcade-clock {
+  margin: 0.4rem 0 1.2rem;
+  text-align: center;
+}
+.arcade-clock-face {
+  display: inline-flex; flex-direction: column; align-items: center;
+  padding: 1rem 3rem 0.7rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--panel-2), #0e1320);
+  border: 3px solid var(--border);
+  box-shadow: 0 0 32px rgba(66,133,244,0.3), inset 0 0 16px rgba(0,0,0,0.45);
+  margin-bottom: 0.7rem;
+  min-width: 320px;
+}
+.arcade-clock-face #timer-text {
+  position: static; transform: none;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 5.5rem; font-weight: 900; line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--good);
+  text-shadow: 0 0 22px rgba(52,168,83,0.6);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+.arcade-clock-label {
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.22em;
+  color: var(--muted); margin-top: 0.4rem;
+}
+/* The thin progress bar lives inside the clock block now */
+.arcade-clock .timer-bar {
+  height: 14px; max-width: 440px; margin: 0 auto 0.6rem;
+  display: block;
+}
+.arcade-clock .timer-bar #timer-text { display: none; }
+.arcade-rules { margin: 0.3rem 0 0; }
+.arcade-rules strong { color: var(--text); }
+
+/* Color the big readout warm/red when low */
+.arcade-clock.warn .arcade-clock-face #timer-text {
+  color: var(--gold);
+  text-shadow: 0 0 16px rgba(255,213,74,0.6);
+}
+.arcade-clock.danger .arcade-clock-face #timer-text {
+  color: var(--bad);
+  text-shadow: 0 0 18px rgba(234,67,53,0.7);
+  animation: clock-flash 0.6s ease-in-out infinite;
+}
+@keyframes clock-flash {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%     { opacity: 0.6; transform: scale(1.04); }
+}
+
+/* Negative point-toast (wrong-answer penalty) */
+.point-toast.point-toast-bad {
+  background: linear-gradient(135deg, var(--bad), #ff6b5b);
+  color: white;
+  box-shadow: 0 4px 16px rgba(234,67,53,0.55);
+}

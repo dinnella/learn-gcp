@@ -23,3 +23,5 @@ def get_db() -> firestore.Client:
 QUESTIONS = "questions"
 SESSIONS = "sessions"
 SCORES = "scores"
+PROGRESSIVE_SCORES = "progressive_scores"
+ARCADE_SCORES = "arcade_scores"

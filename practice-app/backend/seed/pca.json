@@ -52,10 +52,10 @@
     "difficulty": "hard",
     "text": "A regulated EU customer requires that all data for their workload be stored and processed only within the EU, and that Google personnel cannot access the customer's data without explicit, audited approval per access. Which combination of controls best meets this requirement?",
     "options": [
-      "Sign a BAA, use multi-region 'global' resources, enable Cloud Audit Logs",
-      "Pin resources to EU regions only, enable Assured Workloads for EU Regions and Support, enable Access Approval, and use CMEK with EKM keys",
-      "Use only Cloud Storage with bucket-lock; data residency is automatic",
-      "Configure VPC Service Controls and rely on encryption at rest"
+      "Sign a BAA, deploy to EU regions, and enable Cloud Audit Logs Data Access for all Google admin actions",
+      "Assured Workloads for EU + Access Approval + CMEK with Cloud EKM keys held by the customer",
+      "Pin resources to EU regions and use CMEK with Cloud HSM-backed keys held inside Google's KMS",
+      "VPC Service Controls perimeter around EU projects with default Google-managed encryption keys"
     ],
     "correct_index": 1,
     "explanation": "Assured Workloads enforces region pinning and personnel/support residency. Access Approval requires explicit customer approval (with reason logged) before any Google access. CMEK with EKM keeps the key under customer control.",
@@ -198,10 +198,10 @@
     "difficulty": "hard",
     "text": "An on-premises application needs to publish events to a Google Cloud event bus that will be consumed by Cloud Run services. Throughput will be ~50,000 events/second with bursts to 200,000/second. The publisher must use a private network path (no public internet). What is the recommended architecture?",
     "options": [
-      "Cloud Interconnect or HA VPN to a VPC, Pub/Sub publisher uses Private Service Connect endpoint for the Pub/Sub API, Cloud Run subscribers via push subscriptions",
-      "Site-to-Site VPN to a VPC, publisher writes to Cloud Storage objects, Cloud Run reads via Eventarc",
-      "Direct Pub/Sub publish over the public internet using API keys",
-      "Cloud Interconnect, publisher writes to BigQuery streaming inserts, Dataflow forwards to Cloud Run"
+      "HA VPN or Interconnect to the VPC; publisher uses a Private Service Connect endpoint for Pub/Sub; Cloud Run push subscriptions",
+      "Site-to-Site VPN to the VPC; publisher writes to a Cloud Storage bucket; Eventarc fans out finalize events to Cloud Run subscribers",
+      "Direct Pub/Sub publish over the public internet using API keys, with VPC Service Controls protecting the topic from non-allowlisted IPs",
+      "Interconnect to the VPC; publisher writes to BigQuery streaming inserts; a Dataflow pipeline forwards records to Cloud Run subscribers"
     ],
     "correct_index": 0,
     "explanation": "Pub/Sub easily handles the throughput. Private Service Connect creates a private endpoint for the Pub/Sub API inside your VPC, giving the on-prem publisher (reachable via Interconnect or HA VPN) a private network path. Cloud Run push subscriptions are idiomatic for event-driven workloads.",
@@ -265,10 +265,10 @@
     "difficulty": "hard",
     "text": "An enterprise has 1,200 VMs on-prem (mixed Linux/Windows), 40 Oracle DBs, ~6 PB of unstructured files, and a SAP S/4HANA estate. They need a 24-month phased migration with: Migration Center for assessment + wave planning, an execution tool for VMs, a managed path for Oracle (no app changes), and a continuous on-prem→GCS path for the file estate during the long tail. Which combination is BEST?",
     "options": [
-      "Migration Center → Migrate to Virtual Machines (VMs) → Bare Metal Solution (Oracle, no app changes) → Storage Transfer Service (on-prem agent) for files; SAP migrated via Google Cloud's certified SAP migration program",
-      "Migration Center → Cloud Run for everything → Cloud SQL for Oracle → gsutil one-shot copy for files",
-      "Database Migration Service for VMs and Oracle → Storage Transfer Service for files → SAP rebuilt as microservices",
-      "Skip Migration Center; lift-and-shift with `gcloud compute import` and migrate Oracle to Spanner"
+      "Migration Center; Migrate to VMs; Bare Metal Solution for Oracle; Storage Transfer Service for files; certified SAP on Google Cloud program",
+      "Migration Center; rehost VMs on Cloud Run; convert Oracle to Cloud SQL for PostgreSQL; gsutil one-shot copy for files; SAP on Compute Engine",
+      "Database Migration Service for both VMs and Oracle; Storage Transfer Service for files; SAP rebuilt as Cloud Run microservices over 24 months",
+      "Skip Migration Center; `gcloud compute import` for VMs; migrate Oracle to Spanner; manual rsync for files; SAP rehosted on a GKE Autopilot cluster"
     ],
     "correct_index": 0,
     "explanation": "Bare Metal Solution is the canonical zero-app-change path for Oracle on GCP; Migrate to VMs handles the VM fleet; STS with the on-prem agent is the supported continuous file-copy path; SAP has a dedicated Google Cloud certified migration program. DMS is for relational databases only — it cannot migrate VMs. Cloud Run/Spanner aren't drop-in replacements for VMs/Oracle.",
@@ -336,10 +336,10 @@
     "difficulty": "hard",
     "text": "A company runs prod, staging, and dev across 4 business units. Requirements: (1) prod must be isolated from non-prod in the IAM blast radius; (2) BU finance leads must own their BU's billing and IAM but not other BUs'; (3) security team needs read-only across everything; (4) common shared services (logging, networking) must be reusable across all BUs. Which folder layout BEST fits?",
     "options": [
-      "Org → one folder per project; flat",
-      "Org → `bootstrap/`, `common/` (logging, networking host projects), `bu-{a,b,c,d}/` each containing `prod/`, `nonprod/` subfolders with projects underneath; org-level viewer for security; per-BU billing sub-accounts; org policies on `prod/` folders",
-      "Org → one folder per environment (prod/dev/staging) with all BU projects mixed inside",
-      "Separate Google Cloud Organizations per BU"
+      "Flat: every project directly under the Org node, with IAM granted per project and one shared billing account for the whole org",
+      "BU folders with `prod/` and `nonprod/` subfolders; a `common/` folder for shared host projects; org policies on `prod/`; per-BU billing subaccounts",
+      "Environment folders (`prod/`, `staging/`, `dev/`) at the top level with all BU projects mixed inside each, billing tracked per project label",
+      "A separate Google Cloud Organization per BU, peered via cross-org Shared VPC and a central log-aggregation project for shared services"
     ],
     "correct_index": 1,
     "explanation": "BU folders provide IAM isolation and per-BU ownership; the `prod/` subfolder is the natural attach point for stricter org policies and IAM. A `common/` folder hosts Shared VPC and log sinks reusable by every BU. Org-level read role gives security the cross-cutting view. Flat or env-only layouts can't satisfy (1) and (2) simultaneously; separate Orgs fragment governance and shared services.",
@@ -474,10 +474,10 @@
     "difficulty": "hard",
     "text": "A global e-commerce platform runs Cloud Run services in three regions. Requirements: (1) a single anycast IPv4 published in DNS; (2) automatic failover away from an unhealthy region; (3) Cloud CDN for static assets at /assets/*; (4) path-based routing so /api/* hits the application backend; (5) cookie-based session affinity on /api/*. Which architecture BEST satisfies all five?",
     "options": [
-      "GeoDNS with three regional external Application Load Balancers, each with its own external IP",
-      "A global external Application Load Balancer with a URL map: /assets/* → Cloud CDN-enabled backend bucket; /api/* → serverless NEG backends across regions with generated-cookie session affinity",
-      "Regional internal Application Load Balancers behind a public Cloud DNS record",
-      "Global external TCP Proxy Load Balancer with serverless NEGs and Cloud CDN"
+      "GeoDNS with three regional external Application Load Balancers, each with its own external IP and per-region Cloud CDN attached",
+      "Global external ALB: URL map sends `/assets/*` to a CDN backend bucket and `/api/*` to multi-region serverless NEGs with cookie affinity",
+      "Regional internal Application Load Balancers behind a public Cloud DNS record using weighted round-robin DNS for cross-region failover",
+      "Global external TCP Proxy Load Balancer with serverless NEGs, Cloud CDN, and a URL map providing path-based routing for `/api/*`"
     ],
     "correct_index": 1,
     "explanation": "Only the global external ALB delivers a single anycast IP, multi-region serverless NEGs with automatic regional failover, URL-map-based path routing, Cloud CDN integration on a backend bucket, and cookie-based session affinity on a backend service. GeoDNS requires multiple IPs and DNS-cache-bound failover. Internal ALBs cannot serve public traffic. TCP Proxy LB is L4 only — no URL maps, no Cloud CDN.",
@@ -549,10 +549,10 @@
     "difficulty": "hard",
     "text": "A latency-sensitive trading service must run with: (1) p99 < 5 ms intra-rack latency; (2) consistent CPU performance (no noisy neighbors); (3) hardware-level isolation for regulatory reasons; (4) ability to bring custom licensed software bound to specific physical CPUs. Which compute option is BEST?",
     "options": [
-      "Cloud Run with min-instances and 2nd-gen execution",
-      "GKE Autopilot with guaranteed QoS pods",
-      "Compute Engine sole-tenant nodes with compact placement policy and per-VM licensing pinned to the physical host",
-      "Spot VMs in a regional MIG"
+      "Cloud Run with min-instances, 2nd-gen execution, and CPU always-allocated for predictable per-request latency",
+      "GKE Autopilot with guaranteed-QoS pods and a node-affinity rule that pins them to dedicated machine families",
+      "Compute Engine sole-tenant nodes with a compact placement policy and per-VM licensing",
+      "Spot VMs in a regional MIG with compact placement and local SSD scratch storage on each instance"
     ],
     "correct_index": 2,
     "explanation": "Sole-tenant nodes give physical-host isolation, compact placement keeps VMs in the same rack for sub-5ms latency, and per-VM licensing is supported. Cloud Run can't guarantee hardware isolation or compact placement. Autopilot abstracts nodes away. Spot VMs are preemptible — wrong workload class.",
@@ -725,10 +725,10 @@
     "difficulty": "hard",
     "text": "A regulated customer requires that the encryption keys protecting their Cloud Storage data NEVER reside inside Google's infrastructure, and that Google must call out to the customer's key system for every cryptographic operation — so that revoking access at the customer side immediately blocks Google from decrypting. Which option meets this?",
     "options": [
-      "Google-managed encryption keys (default)",
-      "CMEK with keys in Cloud KMS software protection level",
-      "CMEK with Cloud HSM-backed keys",
-      "CMEK with Cloud External Key Manager (Cloud EKM) referencing keys held in the customer's external KMS/HSM"
+      "Google-managed encryption keys (default), with Access Approval enabled for any Google personnel access",
+      "CMEK with keys in Cloud KMS at the software protection level, with automatic 30-day key rotation enabled",
+      "CMEK with Cloud HSM-backed keys in a customer-controlled key ring inside Google's KMS infrastructure",
+      "CMEK with Cloud External Key Manager referencing keys held in the customer's external KMS/HSM"
     ],
     "correct_index": 3,
     "explanation": "Cloud EKM keeps the key material in the customer's external KMS/HSM; Google must reach out for every wrap/unwrap, and revocation at the external KMS immediately denies Google. CMEK (software or HSM) still stores the key inside Google. Default Google-managed keys are entirely Google-controlled.",
@@ -746,10 +746,10 @@
     "difficulty": "easy",
     "text": "A healthcare provider is deploying an EHR application on Google Cloud and must comply with HIPAA. Which combination provides the strongest defense-in-depth?",
     "options": [
-      "Sign a BAA with Google Cloud, use HIPAA-eligible services only, enable Cloud Audit Logs Data Access, encrypt with CMEK, and apply VPC Service Controls",
-      "Use only public preview services since they update fastest",
-      "Store PHI in Cloud Storage with public ACLs and rely on long random object names",
-      "Skip the BAA — Google Cloud is HIPAA-compliant by default"
+      "Sign a BAA, restrict to HIPAA-eligible services, and enable Data Access audit logs, CMEK, and VPC Service Controls",
+      "Sign a BAA, deploy on Compute Engine VMs, and rely on default Google-managed encryption at rest for all PHI",
+      "Skip the BAA, store PHI in a private Cloud Storage bucket with uniform bucket-level access and signed URLs only",
+      "Sign a BAA, use HIPAA-eligible services, and rely on long random Cloud Storage object names plus public-access prevention"
     ],
     "correct_index": 0,
     "explanation": "HIPAA on GCP requires a signed BAA, use of HIPAA-eligible services, and best practices include enabling Data Access audit logs, CMEK, and VPC-SC.",
@@ -788,10 +788,10 @@
     "difficulty": "hard",
     "text": "A US healthcare org processing PHI on GCP must meet: (1) signed BAA; (2) no data egress to non-HIPAA-eligible services; (3) all admin actions audited including reads; (4) network-isolated PHI services; (5) quarterly attestation of effective controls with low manual effort. Which combination BEST satisfies all five?",
     "options": [
-      "Sign a BAA, restrict to HIPAA-eligible services via org policy `gcp.restrictServiceUsage`, enable Data Access audit logs, deploy a VPC Service Controls perimeter around PHI projects, use Security Command Center Premium for continuous compliance monitoring",
-      "Sign a BAA and rely on default Google encryption — that's all HIPAA requires",
-      "Skip the BAA but enable CMEK and VPC-SC",
-      "Deploy everything in a single project with public buckets but long random object names"
+      "BAA + `restrictServiceUsage` org policy + Data Access audit logs + VPC-SC perimeter on PHI projects + SCC Premium continuous monitoring",
+      "Sign a BAA, deploy in a single shared project with CMEK and Google-managed keys, and run weekly manual access reviews",
+      "Skip the BAA but enable CMEK with Cloud EKM, VPC-SC, Access Approval, and quarterly third-party penetration testing",
+      "Sign a BAA, deploy across HIPAA-eligible services, and rely on long random Cloud Storage object names with signed URLs"
     ],
     "correct_index": 0,
     "explanation": "All five controls map directly: BAA (legal), `restrictServiceUsage` enforces eligible-only services, Data Access logs cover read-side auditing, VPC-SC isolates PHI from data exfiltration, and SCC Premium provides continuous-compliance evidence for attestation. The other options each violate at least one HIPAA-on-GCP requirement.",
@@ -859,10 +859,10 @@
     "difficulty": "hard",
     "text": "A Cloud Run service stores a PostgreSQL connection string in Secret Manager. The team wants: (1) version pinning (so a bad rotation can be rolled back instantly); (2) the secret never written to disk in the container; (3) automatic propagation to a new revision when the secret version changes; (4) IAM-scoped per environment. Which configuration BEST meets all four?",
     "options": [
-      "Mount the secret as a versioned environment variable referencing `projects/.../secrets/db/versions/3` (pinned), grant `roles/secretmanager.secretAccessor` to the per-env Cloud Run service account, and redeploy via a Cloud Deploy pipeline triggered by a new secret version",
-      "Bake the password into the container image",
-      "Store it in a public GCS bucket",
-      "Use the same `:latest` alias for all environments and skip IAM scoping"
+      "Pin a specific secret version (e.g. `versions/3`) as an env var; grant `secretAccessor` to per-env service accounts; redeploy via Cloud Deploy on version bumps",
+      "Bake the connection string into the container image and rebuild for each rotation, using image signing for tamper protection",
+      "Mount `secrets/db/versions/latest` as a file at startup; share one Cloud Run service account across dev, staging, and prod for simplicity",
+      "Store the connection string in a Cloud Storage object with uniform bucket-level access and fetch it at container startup with curl"
     ],
     "correct_index": 0,
     "explanation": "Pinning a specific version enables instant rollback (just redeploy with the prior version); env-var injection avoids on-disk writes; per-env service accounts give IAM scoping; pipeline-triggered redeploys propagate version bumps. `:latest` defeats pinning; baked-in or public storage are obvious anti-patterns.",
@@ -926,10 +926,10 @@
     "difficulty": "hard",
     "text": "A streaming pipeline ingests 250k events/sec from Pub/Sub. Requirements: (1) exactly-once writes to BigQuery; (2) 5-minute tumbling windows joined with a slowly-changing dimension table in Cloud Spanner; (3) handle late events up to 30 minutes via watermarks; (4) backfills must reuse the same code as streaming. Which design is BEST?",
     "options": [
-      "Cloud Functions per event writing to BigQuery streaming inserts; cron job for late events",
-      "Dataflow streaming (Apache Beam) with the BigQuery Storage Write API in EXACTLY_ONCE mode; side-input from Spanner via JDBC IO; allowed lateness = 30m; the same Beam pipeline executed in batch mode for backfills",
-      "Dataproc Spark Streaming with at-least-once writes; manual dedup later",
-      "Cloud Run with manual sharding by message attribute"
+      "Cloud Functions per event writing via BigQuery streaming inserts; nightly Dataflow batch reconciliation handles late events and dedup",
+      "Dataflow Beam streaming with Storage Write API EXACTLY_ONCE; Spanner side-input; 30m allowed lateness; same code reused for batch backfills",
+      "Dataproc Spark Structured Streaming with at-least-once writes; periodic dedup queries in BigQuery; Hive-partitioned backfill jobs",
+      "Cloud Run with manual sharding by message attribute and per-shard BigQuery streaming inserts; Cloud Scheduler reruns shards for backfills"
     ],
     "correct_index": 1,
     "explanation": "Beam unifies streaming and batch (same code for backfill); BigQuery Storage Write API supports exactly-once; allowed lateness handles the 30-min watermark; Spanner side-input provides the dimension join. Cloud Functions/Cloud Run lack windowing/watermarks; at-least-once Spark requires post-hoc dedup.",
@@ -1181,10 +1181,10 @@
     "difficulty": "hard",
     "text": "A team is designing observability for a new Cloud Run service. They want: (1) request-based SLOs in Cloud Monitoring; (2) structured JSON logs correlated to traces by trace ID; (3) one dashboard combining latency, error rate, saturation; (4) alerts wired to PagerDuty AND a chat channel; (5) a runbook URL surfaced on every page. Which approach BEST satisfies all five?",
     "options": [
-      "Plaintext logs, Stackdriver default dashboards, single email channel",
-      "Define a Cloud Monitoring SLO + multi-burn-rate policy; configure structured JSON logging with `logging.googleapis.com/trace` field; build a custom dashboard with latency/error/saturation widgets; create PagerDuty AND chat notification channels on the alerting policy; add `documentation.content` with the runbook URL",
-      "Skip SLOs; rely only on uptime checks",
-      "Use Cloud Profiler as the alerting backend"
+      "Plaintext stdout logs, default Cloud Monitoring service dashboards, and a single shared email notification channel for every alerting policy",
+      "Cloud Monitoring SLO + multi-burn-rate policy; structured JSON logs with `logging.googleapis.com/trace`; custom dashboard; PagerDuty + chat channels; `documentation.content` runbook",
+      "Skip SLOs and rely on uptime checks plus a single 5xx-rate alert paging the team email when error rate exceeds 1% for five minutes",
+      "Use Cloud Profiler as the alerting backend; a per-service Cloud Function forwards profile-based incidents to PagerDuty and a chat channel"
     ],
     "correct_index": 1,
     "explanation": "Each control maps to a specific Cloud Monitoring/Logging feature: SLO API, trace-field correlation, dashboard widgets, multiple notification channels per policy, and `documentation.content` for runbook links. The other options each miss multiple requirements.",

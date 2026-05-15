@@ -511,10 +511,10 @@
     "difficulty": "medium",
     "text": "A leadership team is launching its first transformational gen AI initiative. Per Google's recommended steps, which sequence BEST reflects how to choose and integrate a gen AI solution?",
     "options": [
-      "Pick the trendiest model first, then look for a problem to solve",
-      "Define the business need and constraints → identify candidate gen AI solution types (create/summarize/discover/automate) → choose model + platform against those constraints → integrate with change management → measure impact via defined KPIs",
-      "Train a model from scratch before defining the use case",
-      "Skip measurement; gen AI value is intangible"
+      "Pick the trendiest foundation model first, then survey the business for problems where it can be plugged in with minimal change management",
+      "Define business need → identify gen AI solution type → choose model and platform → integrate with change management → measure KPIs",
+      "Train a foundation model from scratch on company data before defining the use case so the team owns full IP and avoids vendor lock-in",
+      "Define the use case and ship to production; skip KPIs since gen AI value is qualitative and emerges over time as users adapt to the tool"
     ],
     "correct_index": 1,
     "explanation": "The exam guide explicitly lists business need → solution-type fit → choose the right solution → integrate → measure as the recommended sequence. The other options invert the order or skip critical steps.",
@@ -561,10 +561,10 @@
     "difficulty": "hard",
     "text": "An enterprise launching a customer-facing Gemini-grounded assistant needs to defend against the SAIF-style risks of (1) prompt-injection-driven data exfiltration, (2) excessive permissions on the agent's service account, (3) unmonitored anomalous usage, and (4) tampering with the underlying training/grounding data. Which combination of Google Cloud controls BEST addresses all four?",
     "options": [
-      "Rely on the model provider to handle all security",
-      "Input/output filtering and safety settings + least-privilege IAM on the agent's service account + Security Command Center + Cloud Audit Logs + access controls on the grounding data store (e.g., Cloud Storage IAM and VPC Service Controls)",
-      "Disable logging to reduce blast radius",
-      "Make the agent's service account an Owner for simplicity"
+      "Rely on the model provider to handle all security; the BAA-equivalent contract shifts responsibility to Google for misuse and exfiltration",
+      "Input/output filtering and safety settings; least-privilege IAM on the agent SA; SCC + Cloud Audit Logs; access controls + VPC-SC on grounding data",
+      "Disable Cloud Logging and Cloud Audit Logs to reduce blast radius; rely on application-side metrics for anomaly detection across all four risks",
+      "Make the agent's service account an Owner for simplicity; rely on Cloud Armor WAF rules and prompt-engineered guardrails inside the system prompt"
     ],
     "correct_index": 1,
     "explanation": "Each requirement maps to a control: filtering+safety for prompt injection, least-privilege IAM for permissions, SCC + audit logs for anomaly detection, and access controls + VPC-SC for data tampering. The other options either offload responsibility or violate basic security principles.",
@@ -590,10 +590,10 @@
     "difficulty": "medium",
     "text": "A bank is deploying a gen AI assistant that influences loan-eligibility conversations. Per Google's responsible AI guidance, which practice is MOST important to implement?",
     "options": [
-      "Maximize automation by removing all human review",
-      "Document data sources, evaluate for bias/fairness, provide explainability for outputs that affect customers, and define accountability owners — keeping humans in the loop for high-impact decisions",
-      "Hide that AI is involved from customers",
-      "Train on all available data without privacy review"
+      "Maximize automation by removing all human review so loan-eligibility responses are delivered consistently in under one second to every customer",
+      "Document data sources, evaluate for bias/fairness, provide explainability, name accountability owners, and keep humans in the loop for high-impact decisions",
+      "Hide that AI is involved from customers so they trust the responses and the bank avoids regulatory disclosure overhead during the early launch",
+      "Train on all available historical loan data without privacy review so the model captures every signal that has historically influenced eligibility outcomes"
     ],
     "correct_index": 1,
     "explanation": "Responsible AI emphasizes transparency, bias/fairness evaluation, explainability, accountability, and HITL for high-impact decisions. The other options violate transparency, fairness, or privacy principles.",

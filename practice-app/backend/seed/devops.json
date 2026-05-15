@@ -52,10 +52,10 @@
     "difficulty": "hard",
     "text": "An enterprise migrating ~300 projects to GCP needs: (a) per-business-unit chargeback; (b) org-wide security guardrails with BU-level customization; (c) centralized network management; (d) blast-radius isolation per BU; (e) self-service project provisioning that automatically inherits guardrails. Which foundation BEST satisfies ALL five?",
     "options": [
-      "Flat list of projects under the org node, IAM grants per project",
-      "Folder hierarchy (Bootstrap, Common, BU folders → env folders → projects), Shared VPC host project(s), org policies at the org with folder overrides, separate billing sub-accounts per BU, a Project Factory (Terraform) for self-service",
-      "One mega-project per BU with everything separated by labels",
-      "A separate GCP Organization per BU"
+      "Flat list of projects directly under the org node, IAM granted per project, one shared billing account, and no folder hierarchy",
+      "Folder hierarchy (Bootstrap, Common, BU → env → projects), Shared VPC, org policies with folder overrides, per-BU billing subaccounts, Project Factory",
+      "One mega-project per BU with workloads separated by labels and per-label IAM Conditions for blast-radius isolation across teams",
+      "A separate Google Cloud Organization per BU with org-policy syndication and Shared VPC peering for centralized network management"
     ],
     "correct_index": 1,
     "explanation": "This is the security-foundations blueprint: folders enable inherited org policies and BU isolation; Shared VPC centralizes networking; per-BU billing sub-accounts enable chargeback; a Project Factory delivers self-service with guardrails baked in. Flat projects defeat inheritance/scale; one project per BU has no isolation; separate Orgs fragment governance.",
@@ -198,10 +198,10 @@
     "difficulty": "hard",
     "text": "A team's CI builds for many GCP projects. Requirements: (1) no long-lived service-account keys anywhere; (2) per-environment principle of least privilege (dev pipeline can't deploy to prod); (3) auditable mapping from a specific GitHub Actions workflow run to the GCP credential it used; (4) cross-org reuse (multiple GitHub orgs). Which design BEST meets all four?",
     "options": [
-      "One JSON SA key per environment, stored as a GitHub org secret",
-      "A single Workload Identity Federation pool with attribute conditions binding `repository`/`workflow`/`environment` claims to per-env service accounts; each env's SA has narrow IAM; provider config logs the OIDC subject for audit",
-      "Personal access tokens for each developer used by the workflow",
-      "Disable WIF and use `gcloud auth login` interactively in CI"
+      "One JSON service-account key per environment stored as a GitHub org secret, rotated quarterly via a scheduled workflow",
+      "A WIF pool with attribute conditions on `repository`/`workflow`/`environment` mapped to per-env service accounts with narrow IAM; OIDC subject logged",
+      "Per-developer personal access tokens stored in repository secrets and used by the workflow to call gcloud commands directly each run",
+      "Disable WIF and use `gcloud auth login` interactively at the start of each CI job, sharing a bot Google account across all pipelines"
     ],
     "correct_index": 1,
     "explanation": "WIF attribute conditions on `repository`, `workflow`, and `environment` allow fine-grained per-env mappings without keys; OIDC subjects appear in Cloud Audit Logs for traceability; pools can accept multiple GitHub orgs as providers. Stored SA keys and PATs both violate the 'no long-lived key' rule.",
@@ -265,10 +265,10 @@
     "difficulty": "hard",
     "text": "A platform team manages 30 GKE clusters across regions and tenants. Requirements: (1) one source of truth for cluster + namespace configs (GitOps); (2) prevent non-compliant resources at admission (no privileged pods, required labels); (3) per-team namespaces with quotas; (4) centralized policy reporting across the fleet. Which combination is BEST?",
     "options": [
-      "kubectl apply from each engineer's laptop; trust but verify",
-      "Add the clusters to a GKE fleet; enable Config Sync (root + namespace repos), Policy Controller (constraint templates for pod security + label policies), tenant-namespace ResourceQuotas, and the fleet-wide Policy Controller dashboard for posture",
-      "Helm-only deployments with no admission controls",
-      "ArgoCD per cluster with no cross-cluster reporting"
+      "kubectl apply from each engineer's laptop, with quarterly manual config audits and a shared spreadsheet tracking per-cluster drift",
+      "GKE fleet with Config Sync (root + namespace repos), Policy Controller constraints, per-tenant ResourceQuotas, and the fleet posture dashboard",
+      "Helm-only deployments per cluster with no admission controls; rely on PR review of charts and post-deploy reconciliation jobs for drift",
+      "ArgoCD instance per cluster with no central control plane; per-team repos and a custom Prometheus exporter for cross-cluster posture metrics"
     ],
     "correct_index": 1,
     "explanation": "Config Sync = GitOps source of truth; Policy Controller = OPA Gatekeeper for admission constraints; ResourceQuotas isolate tenants; the fleet Policy Controller dashboard gives unified posture. The other options each miss admission control or central reporting.",
@@ -332,10 +332,10 @@
     "difficulty": "hard",
     "text": "A team rolls out a new GKE service with these requirements: (1) progressive delivery 5% → 25% → 100% with a 30-minute soak at each step; (2) automatic abort if SLO error budget burn rate exceeds 5×; (3) reproducible deploy artifacts with attestations; (4) one approval gate before prod. Which Google Cloud design BEST fits?",
     "options": [
-      "kubectl apply with manual percentage edits; pager on errors",
-      "Cloud Deploy pipeline with a canary strategy (5/25/100), `verify` jobs that query Cloud Monitoring SLO burn rate and fail (auto-abort); Binary Authorization attestor on the image; manual `promote` approval before the prod target",
-      "Blue/green with no health gating",
-      "Recreate strategy in production"
+      "kubectl apply with manual percentage edits between 5/25/100 phases; pager on 5xx spikes; rollback by re-applying the prior manifest from Git",
+      "Cloud Deploy canary (5/25/100); `verify` jobs query SLO burn rate to auto-abort; Binary Authorization attestor on the image; promotion approval to prod",
+      "Blue/green with two parallel stacks and a manual cutover at the global ALB; no automated health gating between blue and green deployments",
+      "Recreate strategy: drain the prior version then deploy the new one across all replicas at once, with a 5-minute observation window before scaling"
     ],
     "correct_index": 1,
     "explanation": "Cloud Deploy canary supports phased percentages; `verify` jobs can call Monitoring and fail to abort the rollout; Binary Authorization gives the attestation requirement; promotion approvals satisfy the manual gate. kubectl/recreate/blue-green-without-gating each miss multiple requirements.",
@@ -403,10 +403,10 @@
     "difficulty": "hard",
     "text": "A backwards-incompatible API v2 must be released alongside v1 for 60 days. Constraints: (1) shared underlying database; (2) zero downtime; (3) per-tenant feature-flag opt-in to v2; (4) ability to dark-launch v2 read paths to all tenants for shadow comparison before any tenant opts in; (5) instant kill-switch on v2. Which strategy BEST fits?",
     "options": [
-      "Big-bang cutover during a maintenance window",
-      "Run v1 and v2 deployments behind a global ALB; use a feature-flag service (e.g. config-driven) for tenant opt-in; mirror a copy of read traffic to v2 (shadow) via traffic-mirroring or app-level fanout; use the expand–contract DB migration pattern (additive schema first, dual-write, then contract); flag-based instant kill-switch",
-      "Replace v1 with v2 atomically and rely on rollbacks",
-      "Deploy v2 only to a different region and use DNS round-robin"
+      "Big-bang cutover during a 4-hour maintenance window, with a documented rollback plan and a static read-only mode shown to users while v2 deploys",
+      "v1 and v2 behind one ALB; per-tenant feature flags for opt-in; mirror reads to v2 for shadow comparison; expand–contract DB migration; flag kill-switch",
+      "Replace v1 with v2 atomically across all tenants and rely on Cloud Deploy rollback if any tenant reports breakage in the first hour after cutover",
+      "Deploy v2 only to a separate region and use weighted DNS round-robin to shift tenant traffic from v1 to v2 over the 60-day coexistence window"
     ],
     "correct_index": 1,
     "explanation": "Expand–contract makes the shared DB safe; ALB + feature flags handle tenant opt-in and kill-switch; shadow traffic enables comparison without user impact. The other options either cause downtime, lack the kill-switch, or break sticky sessions.",
@@ -470,10 +470,10 @@
     "difficulty": "hard",
     "text": "A regulated team needs CI that: (1) builds in an isolated, ephemeral worker (no shared mutable state); (2) signs every artifact with SLSA L3-grade provenance; (3) blocks builds that pull from non-allowlisted base images; (4) integrates with Artifact Registry remote repos to proxy upstream packages; (5) zero long-lived credentials. Which Google Cloud setup BEST satisfies all five?",
     "options": [
-      "Self-hosted Jenkins on a long-running VM with shared workspaces",
-      "Cloud Build with private pools (ephemeral workers), SLSA build provenance enabled, an org policy + custom build step that fails on disallowed base images, Artifact Registry remote/virtual repos as the only proxy, and Workload Identity Federation for any external auth",
-      "GitHub-hosted runners with stored SA JSON keys",
-      "Bash scripts run on developers' laptops"
+      "Self-hosted Jenkins on a long-running VM with shared workspaces, secrets in Vault, and post-build SLSA attestation generation by a custom plugin",
+      "Cloud Build private pools (ephemeral); SLSA provenance enabled; allowlist build step for base images; Artifact Registry remote repos; WIF for external auth",
+      "GitHub-hosted runners with stored service-account JSON keys rotated weekly, base-image allowlist enforced via PR review, and Cosign image signing",
+      "Bash scripts run on developers' laptops with signed commits required, plus post-merge re-runs in Cloud Build to attach SLSA provenance retroactively"
     ],
     "correct_index": 1,
     "explanation": "Cloud Build private pools give ephemeral isolated workers; SLSA provenance is built-in; Artifact Registry remote repos proxy upstreams under your control; an allowlist check fails non-compliant builds; WIF removes long-lived keys. The other options violate at least one of the five constraints.",
@@ -545,10 +545,10 @@
     "difficulty": "hard",
     "text": "A regulated team must guarantee that production GKE only runs images that are: (1) built by their Cloud Build pipeline; (2) have SLSA-compliant provenance; (3) have NO critical CVEs at deploy time; (4) progress through dev → staging → prod with manual approval and full audit trail. Which combination meets ALL four?",
     "options": [
-      "Cloud Build with provenance; Artifact Registry with vulnerability scanning; Binary Authorization policy requiring the build attestor AND a vulnerability check attestor; Cloud Deploy pipeline with promotion approvals (audited via Cloud Audit Logs)",
-      "Manual `kubectl apply` after a code review",
-      "Cloud Build only; rely on engineers to check CVEs before deploy",
-      "Artifact Registry vulnerability scanning only"
+      "Cloud Build provenance; AR vulnerability scanning; Binary Authorization requiring build + vuln attestors; Cloud Deploy pipeline with audited promotion approvals",
+      "Manual `kubectl apply` after a two-reviewer code review of the manifest, with post-deploy CVE scanning of the running image in production",
+      "Cloud Build with provenance generation; rely on engineers to check the Artifact Registry vulnerability report before issuing the prod deploy command",
+      "Artifact Registry vulnerability scanning plus a scheduled Cloud Function that deletes images failing the CVE threshold from the production repo daily"
     ],
     "correct_index": 0,
     "explanation": "Binary Authorization composes multiple required attestors (build provenance + vulnerability gate); Cloud Deploy provides structured promotion with approvals; Audit Logs record every promotion. Manual apply lacks gating and audit; CB-only or scan-only each miss enforcement at admission.",
@@ -821,10 +821,10 @@
     "difficulty": "hard",
     "text": "After three Sev-1s in 30 days from the same root cause class (a missing pre-deploy schema check), which set of action items BEST follows SRE postmortem guidance?",
     "options": [
-      "Email a reminder to all engineers to be careful",
-      "Add an automated pre-deploy schema-compatibility check in the CI/CD pipeline that fails the build on incompatibility; add a Cloud Deploy `verify` job that runs the check; track an SLO on schema-related incidents; add a blameless postmortem retrospective scheduled for 60 days",
-      "Forbid all schema changes",
-      "Add a runbook step that the on-call must remember during deploys"
+      "Email a reminder to all engineers to be careful, plus a mandatory training module on database migration best practices for the org",
+      "Automated pre-deploy schema-compatibility check in CI; Cloud Deploy `verify` job runs the same check; SLO on schema incidents; 60-day postmortem follow-up",
+      "Forbid all schema changes for 90 days while the team builds a manual approval workflow for any future migrations across the organization",
+      "Add a runbook step the on-call must run before deploys, plus a Slack reminder bot that posts a checklist before each Cloud Deploy promotion"
     ],
     "correct_index": 1,
     "explanation": "Systemic action items (pipeline check, verify job, tracked SLO, follow-up) prevent the entire class. Reminders and runbook-only steps depend on humans remembering at the wrong time; banning schema changes is impractical.",
@@ -888,10 +888,10 @@
     "difficulty": "hard",
     "text": "A platform team wants metrics that: (1) use PromQL; (2) are queryable globally across many projects; (3) retain raw resolution for 6 weeks and downsampled for 24 months; (4) accept Prometheus remote_write from on-prem clusters too. Which design BEST fits?",
     "options": [
-      "Run a self-managed Prometheus + Thanos cluster on GKE",
-      "Google Cloud Managed Service for Prometheus with a metrics scope spanning all projects; collectors in each cluster (in-cluster managed collection) and remote_write from on-prem; rely on GMP's long retention",
-      "Cloud Logging only — metrics aren't needed",
-      "Send all metrics to BigQuery via Pub/Sub and query with SQL"
+      "Self-managed Prometheus + Thanos cluster on GKE with object-storage long-term blocks and a per-region Sidecar federation layer for global query",
+      "Managed Service for Prometheus with a multi-project metrics scope; managed collection in each cluster; remote_write from on-prem clusters",
+      "Cloud Logging with log-based metrics emitted by each app; PromQL via the legacy `external.googleapis.com` adapter and a custom exporter",
+      "Send all metrics to BigQuery via Pub/Sub and query with SQL; expose PromQL via a custom Cloud Run adapter that translates queries to SQL"
     ],
     "correct_index": 1,
     "explanation": "GMP is PromQL-compatible, supports remote_write from on-prem, has long native retention, and metrics scopes provide cross-project query. Self-managed Thanos is expensive ops; Logging isn't a metrics store; raw BigQuery loses PromQL.",
@@ -955,10 +955,10 @@
     "difficulty": "hard",
     "text": "An organization with 200 GCP projects across many tenants needs: (1) all Admin Activity + Data Access audit logs centralized for 7 years; (2) per-tenant application logs routed to per-tenant BigQuery datasets retained 90 days; (3) drop verbose DEBUG logs to control cost. Which design BEST meets all three?",
     "options": [
-      "An organization-level aggregated sink to a Cloud Logging bucket (7y retention) for audit logs; project-level sinks filtered by `labels.tenant_id` exporting to per-tenant BigQuery datasets (90-day partition expiry); exclusion filters on the `_Default` sink to drop DEBUG before ingest",
-      "One sink per project to a single BigQuery dataset, no exclusions",
-      "Export everything to GCS and grep with Dataproc",
-      "Disable Logging entirely and rely on application stdout"
+      "Org-level aggregated sink to a 7-year Cloud Logging bucket for audit logs; per-tenant BigQuery sinks with 90-day partition expiry; `_Default` exclusions for DEBUG",
+      "One sink per project to a single org-wide BigQuery dataset with 7-year partition expiry; no per-tenant routing or `_Default` exclusions for DEBUG logs",
+      "Export all logs to one Cloud Storage bucket with 7-year retention; grep historical data with on-demand Dataproc Spark jobs and per-tenant prefix paths",
+      "Disable Cloud Logging; have every workload write JSON to stdout, scraped by Fluent Bit and shipped to a self-managed Loki cluster with per-tenant streams"
     ],
     "correct_index": 0,
     "explanation": "Org-level aggregated sinks centralize audit data; project-level sinks with tenant filters give per-tenant BigQuery routing; partition expiry handles 90-day retention; exclusions on `_Default` drop DEBUG before billable ingest. The other designs miss tenant routing, cost control, or governance.",
@@ -1026,10 +1026,10 @@
     "difficulty": "hard",
     "text": "A platform team wants a single dashboard that combines: (1) a PromQL p99 latency widget from GMP; (2) a Cloud Logging-based-metric error count; (3) an SLO error budget burn-down; (4) a custom log query as a table. Constraints: must be defined as code (reviewable in Git) and deployed via CI. Which approach BEST fits?",
     "options": [
-      "Click around the Cloud Console and screenshot it for review",
-      "Define the dashboard as a Cloud Monitoring Dashboard JSON (or via Terraform `google_monitoring_dashboard`) combining PromQL widgets, log-based-metric widgets, SLO widgets, and a logs-panel widget; commit to Git; deploy via CI",
-      "Export to Looker Studio and email PDFs",
-      "Use Grafana with no version control"
+      "Click around the Cloud Console to compose the dashboard and screenshot it as the source of truth for review by the platform team during PRs",
+      "Define the dashboard as Cloud Monitoring JSON (or `google_monitoring_dashboard` Terraform) with PromQL/log-metric/SLO/logs widgets; deploy via CI",
+      "Export the data to Looker Studio with scheduled refreshes; mail dashboard PDFs to the team weekly and store the rendered report in version control",
+      "Run self-hosted Grafana on GKE with the Cloud Monitoring data source; manage dashboard JSON manually inside the Grafana UI and back up to Git nightly"
     ],
     "correct_index": 1,
     "explanation": "Cloud Monitoring dashboards support PromQL widgets, log-based-metric widgets, SLO burn widgets, and logs panels — all expressible in JSON / Terraform for GitOps. The other options violate the as-code requirement.",
@@ -1093,10 +1093,10 @@
     "difficulty": "hard",
     "text": "A platform team needs unified observability across Go, Java, and Python services on GKE. Constraints: (1) only OpenTelemetry SDKs in apps (no vendor SDKs); (2) traces, metrics, AND logs must correlate by trace ID; (3) backend must be fully managed by Google; (4) no custom exporters in app code. Which design satisfies ALL four?",
     "options": [
-      "OpenTelemetry SDKs in apps export OTLP to a self-managed Jaeger + Prometheus + ELK stack",
-      "OpenTelemetry SDKs in apps send OTLP to an OpenTelemetry Collector (DaemonSet) which exports traces to Cloud Trace, metrics to Managed Service for Prometheus, and logs to Cloud Logging with trace_id field injection for correlation",
-      "Datadog Agent on every node forwarding to Datadog SaaS",
-      "Cloud Profiler as the single backend for traces, metrics, and logs"
+      "OpenTelemetry SDKs export OTLP to a self-managed Jaeger + Prometheus + ELK stack on GKE; trace_id correlated by a Fluentd log enricher pipeline",
+      "OTel SDKs send OTLP to an OTel Collector that exports traces to Cloud Trace, metrics to Managed Prometheus, and logs to Cloud Logging with trace_id",
+      "Datadog Agent on every node forwarding traces, metrics, and logs to Datadog SaaS via OTLP, with Datadog APM providing the trace_id correlation layer",
+      "Cloud Profiler as the single Google-managed backend for traces, metrics, and logs; OTel SDKs export directly via the Profiler agent's OTLP receiver"
     ],
     "correct_index": 1,
     "explanation": "Apps stay pure-OTel via OTLP to a Collector that fans out to Google-managed backends; injecting trace_id into log entries enables cross-signal correlation. Self-managed stacks fail the 'fully managed' constraint; Datadog violates the OTel-SDK-only and managed-Google constraints; Profiler doesn't replace tracing/logging/metrics.",
@@ -1327,10 +1327,10 @@
     "difficulty": "hard",
     "text": "A platform team is building a FinOps capability. Requirements: (1) per-team chargeback by GCP labels; (2) anomaly detection on daily spend; (3) forecast budget alerts at 50/80/100% with Pub/Sub for automation; (4) ad-hoc SQL slicing of detailed cost line items; (5) recommendations for rightsizing. Which combination BEST fits?",
     "options": [
-      "Cloud Billing reports only",
-      "Cloud Billing budgets (with Pub/Sub on threshold) + BigQuery detailed billing export (for SQL + label-based chargeback) + Cloud Monitoring anomaly detection on daily-spend log-based metric + Active Assist Recommender (cost recommendations)",
-      "Manual spreadsheet maintained weekly",
-      "Cloud Asset Inventory exports only"
+      "Cloud Billing reports in the console only, with daily review by the FinOps team and weekly slide updates to engineering leads",
+      "Billing budgets with Pub/Sub; BigQuery billing export for SQL/label chargeback; Monitoring anomaly detection on spend; Active Assist Recommender",
+      "Manual spreadsheet maintained weekly by the FinOps team using exports from the Cloud Billing reports UI plus per-team labels for chargeback",
+      "Cloud Asset Inventory exports to BigQuery only, with per-team SQL views and a Cloud Function emitting alerts on resource-count growth above a baseline"
     ],
     "correct_index": 1,
     "explanation": "Each requirement maps to a feature: budgets+Pub/Sub for alerts/automation, BigQuery export for chargeback/SQL, Monitoring anomaly detection on a derived metric, and Recommender for rightsizing. Reports/spreadsheets/CAI alone miss most requirements.",

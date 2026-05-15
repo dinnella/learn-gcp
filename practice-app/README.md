@@ -63,6 +63,16 @@ open http://localhost:8080
 
 `make down` stops everything; data is **not** persisted between sessions (emulator is in-memory by design).
 
+## Game modes
+
+**Classic** — 10 scenario questions on a single exam, fixed difficulty. Per-section report card with study recommendations. Per-exam leaderboard.
+
+**Progressive** — adaptive difficulty across all loaded exams. First question is medium; each correct answer steps up (medium → hard); each wrong answer steps down. **3 strikes ends the run.** Scoring: easy = 1 pt, medium = 2 pts, hard = 4 pts. Final results show your **percentile** vs all saved progressive runs and a per-exam breakdown. Single shared leaderboard.
+
+**Arcade** — 2-minute sprint, rapid-fire (no Lock-it-in button — first click locks the answer). Each correct answer adds points (500 / 1000 / 2000) and adds time (10 / 15 / 20 s). Wrong answers only debit time. **Level up every 10 correct** — the difficulty mix gets harder and the timer resets to 110 → 100 → 90s. Single shared leaderboard sorted by score, then level, then correct-count.
+
+The mode picker is on the home screen. Quit any in-progress run with the `Quit run` button — abandoned runs do **not** get saved to the leaderboard.
+
 ## Quickstart (deploy to your real GCP project)
 
 After completing repo bootstrap and pushing to GitHub:

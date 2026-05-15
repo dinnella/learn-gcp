@@ -12,16 +12,33 @@ from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from . import sessions as sessions_svc
+from . import progressive as progressive_svc
+from . import arcade as arcade_svc
 from .db import QUESTIONS, get_db
 from .models import (
     AnswerRequest,
     AnswerResponse,
+    ArcadeAnswerRequest,
+    ArcadeAnswerResponse,
+    ArcadeContinueResponse,
+    ArcadeLeaderboardResponse,
+    ArcadeQuestionForClient,
+    ArcadeScoreEntry,
+    ArcadeSessionStartResponse,
+    ArcadeSessionSummary,
     DocLink,
     LeaderboardResponse,
+    ProgressiveAnswerResponse,
+    ProgressiveLeaderboardResponse,
+    ProgressiveScoreEntry,
+    ProgressiveSessionStartResponse,
+    ProgressiveSessionSummary,
     QuestionForClient,
     ScoreEntry,
     SessionStartResponse,
     SessionSummary,
+    StartArcadeSessionRequest,
+    StartProgressiveSessionRequest,
     StartSessionRequest,
 )
 from .questions import get_question, get_question_shuffled, list_difficulties, list_sections
@@ -244,6 +261,177 @@ def leaderboard(exam: str, limit: int = 20) -> LeaderboardResponse:
     if exam not in ("pca", "devops", "genai"):
         raise HTTPException(400, "exam must be 'pca', 'devops', or 'genai'")
     return sessions_svc.leaderboard(exam, min(limit, 100))
+
+
+# ---------- Progressive mode ----------
+
+@app.post("/api/progressive/sessions", response_model=ProgressiveSessionStartResponse)
+def progressive_start(req: StartProgressiveSessionRequest) -> ProgressiveSessionStartResponse:
+    try:
+        result = progressive_svc.start_progressive_session(req.player_name, req.max_strikes)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    fq = result["first_question"]
+    return ProgressiveSessionStartResponse(
+        session_id=result["session_id"],
+        max_strikes=result["max_strikes"],
+        first_question=QuestionForClient(**fq),
+    )
+
+
+@app.post("/api/progressive/sessions/{sid}/answer", response_model=ProgressiveAnswerResponse)
+def progressive_answer(sid: str, req: AnswerRequest) -> ProgressiveAnswerResponse:
+    try:
+        result = progressive_svc.record_progressive_answer(
+            sid, req.question_id, req.selected_index, req.confidence
+        )
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    nq_payload = result.get("next_question")
+    nq_model = QuestionForClient(**nq_payload) if nq_payload else None
+    return ProgressiveAnswerResponse(
+        correct=result["correct"],
+        correct_index=result["correct_index"],
+        points_awarded=result["points_awarded"],
+        explanation=result["explanation"],
+        doc_links=[DocLink(**d) for d in result["doc_links"]],
+        next_question=nq_model,
+        progress=result["progress"],
+        ended=result["ended"],
+        ended_reason=result["ended_reason"],
+    )
+
+
+@app.get("/api/progressive/sessions/{sid}", response_model=ProgressiveSessionSummary)
+def progressive_summary(sid: str) -> ProgressiveSessionSummary:
+    s = progressive_svc.progressive_summary(sid)
+    if s is None:
+        raise HTTPException(404, "session not found")
+    return s
+
+
+@app.post("/api/progressive/sessions/{sid}/score", response_model=ProgressiveScoreEntry)
+def progressive_submit_score(sid: str, req: SubmitScoreRequest) -> ProgressiveScoreEntry:
+    try:
+        return progressive_svc.submit_progressive_score(sid, req.player_name)
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@app.get("/api/progressive/leaderboard", response_model=ProgressiveLeaderboardResponse)
+def progressive_lb(limit: int = 20) -> ProgressiveLeaderboardResponse:
+    return progressive_svc.progressive_leaderboard(min(limit, 100))
+
+
+@app.post("/api/progressive/sessions/{sid}/abandon", response_model=ProgressiveSessionSummary)
+def progressive_abandon(sid: str) -> ProgressiveSessionSummary:
+    try:
+        return progressive_svc.abandon_progressive_session(sid)
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+# ---------- Arcade mode ----------
+
+@app.post("/api/arcade/sessions", response_model=ArcadeSessionStartResponse)
+def arcade_start(req: StartArcadeSessionRequest) -> ArcadeSessionStartResponse:
+    try:
+        result = arcade_svc.start_arcade_session(req.player_name, req.starting_seconds)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return ArcadeSessionStartResponse(
+        session_id=result["session_id"],
+        starting_seconds=result["starting_seconds"],
+        time_remaining_ms=result["time_remaining_ms"],
+        first_question=ArcadeQuestionForClient(**result["first_question"]),
+    )
+
+
+@app.post("/api/arcade/sessions/{sid}/answer", response_model=ArcadeAnswerResponse)
+def arcade_answer(sid: str, req: ArcadeAnswerRequest) -> ArcadeAnswerResponse:
+    try:
+        r = arcade_svc.record_arcade_answer(
+            sid, req.question_id, req.selected_index, req.confidence, req.client_elapsed_ms
+        )
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    nq = ArcadeQuestionForClient(**r["next_question"]) if r["next_question"] else None
+    return ArcadeAnswerResponse(
+        correct=r["correct"],
+        correct_index=r["correct_index"],
+        points_awarded=r["points_awarded"],
+        time_bonus_seconds=r["time_bonus_seconds"],
+        time_penalty_seconds=r.get("time_penalty_seconds", 0),
+        time_remaining_ms=r["time_remaining_ms"],
+        score_total=r["score_total"],
+        correct_total=r["correct_total"],
+        correct_in_level=r["correct_in_level"],
+        level=r["level"],
+        max_streak=r["max_streak"],
+        current_streak=r["current_streak"],
+        explanation=r["explanation"],
+        doc_links=[DocLink(**d) for d in r["doc_links"]],
+        next_question=nq,
+        level_up_pending=r["level_up_pending"],
+        ended=r["ended"],
+        ended_reason=r["ended_reason"],
+    )
+
+
+@app.post("/api/arcade/sessions/{sid}/continue", response_model=ArcadeContinueResponse)
+def arcade_continue(sid: str) -> ArcadeContinueResponse:
+    try:
+        r = arcade_svc.continue_arcade_session(sid)
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return ArcadeContinueResponse(
+        level=r["level"],
+        time_remaining_ms=r["time_remaining_ms"],
+        next_question=ArcadeQuestionForClient(**r["next_question"]),
+    )
+
+
+@app.get("/api/arcade/sessions/{sid}", response_model=ArcadeSessionSummary)
+def arcade_session_summary(sid: str) -> ArcadeSessionSummary:
+    s = arcade_svc.arcade_summary(sid)
+    if s is None:
+        raise HTTPException(404, "session not found")
+    return s
+
+
+@app.post("/api/arcade/sessions/{sid}/score", response_model=ArcadeScoreEntry)
+def arcade_submit_score(sid: str, req: SubmitScoreRequest) -> ArcadeScoreEntry:
+    try:
+        return arcade_svc.submit_arcade_score(sid, req.player_name)
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@app.get("/api/arcade/leaderboard", response_model=ArcadeLeaderboardResponse)
+def arcade_lb(limit: int = 20) -> ArcadeLeaderboardResponse:
+    return arcade_svc.arcade_leaderboard(min(limit, 100))
+
+
+@app.post("/api/arcade/sessions/{sid}/abandon", response_model=ArcadeSessionSummary)
+def arcade_abandon(sid: str) -> ArcadeSessionSummary:
+    try:
+        return arcade_svc.abandon_arcade_session(sid)
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
 
 
 # ---------- Static SPA ----------

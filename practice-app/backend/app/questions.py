@@ -104,3 +104,70 @@ def get_question_full(qid: str) -> dict | None:
 def get_question_correct_index(qid: str) -> int | None:
     full = get_question_full(qid)
     return full["correct_index"] if full else None
+
+
+# ---------------------------------------------------------------------------
+# Cert registry — single source of truth for which exams exist
+# ---------------------------------------------------------------------------
+
+def list_exams() -> list[str]:
+    """Return the sorted list of distinct exam ids present in the question bank.
+
+    Used by progressive + arcade modes so that adding a new cert (e.g.
+    ``aws-saa.json`` to the seed dir) flows through automatically with no
+    code change to the selection algorithms.
+    """
+    db = get_db()
+    seen: set[str] = set()
+    for d in db.collection(QUESTIONS).stream():
+        exam = d.to_dict().get("exam")
+        if exam:
+            seen.add(exam)
+    return sorted(seen)
+
+
+def pick_one_question(
+    exams: Iterable[str],
+    difficulty: str | None,
+    exclude_ids: Iterable[str],
+) -> Question | None:
+    """Return one random unserved question matching the filters, or None."""
+    db = get_db()
+    exam_set = set(exams)
+    excl = set(exclude_ids)
+    pool: list = []
+    for d in db.collection(QUESTIONS).stream():
+        data = d.to_dict()
+        if data.get("exam") not in exam_set:
+            continue
+        if difficulty and data.get("difficulty", "medium") != difficulty:
+            continue
+        if d.id in excl:
+            continue
+        pool.append(d)
+    if not pool:
+        return None
+    chosen = random.choice(pool)
+    return _doc_to_question(chosen)
+
+
+def count_questions(
+    exams: Iterable[str],
+    difficulty: str | None,
+    exclude_ids: Iterable[str],
+) -> int:
+    """Count unserved questions matching the filters."""
+    db = get_db()
+    exam_set = set(exams)
+    excl = set(exclude_ids)
+    n = 0
+    for d in db.collection(QUESTIONS).stream():
+        data = d.to_dict()
+        if data.get("exam") not in exam_set:
+            continue
+        if difficulty and data.get("difficulty", "medium") != difficulty:
+            continue
+        if d.id in excl:
+            continue
+        n += 1
+    return n

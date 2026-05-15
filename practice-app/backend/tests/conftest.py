@@ -159,4 +159,9 @@ def fake_db(monkeypatch) -> FakeDB:
     import app.questions as questions_module
     monkeypatch.setattr(sessions_module, "get_db", lambda: db)
     monkeypatch.setattr(questions_module, "get_db", lambda: db)
+    # Same for the new mode services
+    import app.progressive as progressive_module
+    import app.arcade as arcade_module
+    monkeypatch.setattr(progressive_module, "get_db", lambda: db)
+    monkeypatch.setattr(arcade_module, "get_db", lambda: db)
     return db
