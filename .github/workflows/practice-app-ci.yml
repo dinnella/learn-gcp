@@ -1,0 +1,133 @@
+name: practice-app — CI
+
+# Run on every PR that touches the app, and on pushes to main.
+# The deploy workflow (practice-app.yml) runs separately on push to main only.
+# Branch protection should require both `unit-tests` and `e2e` to pass before merge.
+
+on:
+  pull_request:
+    paths:
+      - 'practice-app/**'
+      - '.github/workflows/practice-app-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'practice-app/**'
+      - '.github/workflows/practice-app-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Unit + integration tests — pure Python, no Docker, fast (~20s)
+  # -------------------------------------------------------------------------
+  unit-tests:
+    name: Unit & integration tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: practice-app/backend
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: practice-app/backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -q --tb=short
+
+  # -------------------------------------------------------------------------
+  # E2E tests — spins up the full docker-compose stack, then runs Playwright
+  # -------------------------------------------------------------------------
+  e2e:
+    name: E2E tests (Playwright)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # --- Start the full local stack (Firestore emulator + app) ---
+      - name: Start local stack
+        working-directory: practice-app
+        run: docker compose up --build -d
+
+      - name: Wait for app to be healthy
+        run: |
+          echo "Waiting for app to accept requests..."
+          for i in $(seq 1 30); do
+            if curl -fsSo /dev/null http://localhost:8080/api/health; then
+              echo "App is healthy after ${i} attempts."
+              break
+            fi
+            echo "  attempt $i/30 — retrying in 5s"
+            sleep 5
+          done
+
+      - name: Seed questions into Firestore emulator
+        working-directory: practice-app
+        # -T disables TTY allocation (required for non-interactive CI)
+        run: docker compose exec -T app python -m app.seed_emulator
+
+      # --- Set up Node + Playwright ---
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Playwright browser binaries
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('practice-app/e2e/package.json') }}
+          restore-keys: playwright-chromium-${{ runner.os }}-
+
+      - name: Install Playwright
+        working-directory: practice-app/e2e
+        run: npm install
+
+      - name: Install Chromium browser
+        working-directory: practice-app/e2e
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium system deps (cached run)
+        working-directory: practice-app/e2e
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # --- Run tests ---
+      - name: Run E2E tests
+        working-directory: practice-app/e2e
+        env:
+          BASE_URL: http://localhost:8080
+          CI: 'true'
+        run: npx playwright test
+
+      # --- Artifacts — always upload even on failure ---
+      - name: Upload screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            practice-app/e2e/test-results/
+            practice-app/e2e/playwright-report/
+          retention-days: 14
+
+      # --- Tear down the stack ---
+      - name: Stop local stack
+        if: always()
+        working-directory: practice-app
+        run: docker compose down -v
