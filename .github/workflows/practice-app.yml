@@ -90,18 +90,41 @@ jobs:
           docker push "$IMAGE_URI"
           echo "IMAGE_URI=$IMAGE_URI" >> "$GITHUB_ENV"
 
-      # 3) Re-apply infra with the new image tag — Cloud Run rolls forward atomically.
-      - name: tofu apply (deploy new revision)
-        working-directory: practice-app/infra
-        env:
-          TF_VAR_edge_shared_secret: ${{ secrets.EDGE_SHARED_SECRET }}
+      # 3) Rolling deploy via gcloud — zero-downtime.
+      #
+      # Why gcloud instead of `tofu apply -var image_tag=<sha>`?
+      # The bootstrap tofu apply (step 1) runs without image_tag, so
+      # effective_image defaults to the GCP hello-world placeholder. If tofu
+      # were to apply again here it would race: apply#1 reverts image → hello,
+      # apply#2 updates image → real app. Users see the placeholder page during
+      # the build window. Adding `image` to lifecycle.ignore_changes in
+      # main.tf removes tofu from the image lifecycle entirely; gcloud owns it.
+      #
+      # Zero-downtime strategy:
+      #   a) Warm up the current revision so Cloud Run has a live instance ready
+      #      to handle traffic while the new revision's startup probe runs.
+      #      (With min_instance_count=0 the old revision may be at 0 instances;
+      #      a health-check request brings one up without changing any config.)
+      #   b) `gcloud run deploy` creates the new revision and waits until its
+      #      startup probe passes BEFORE switching traffic. Old revision handles
+      #      all requests during that window.
+      #   c) Traffic switches atomically once the new revision is healthy.
+      - name: Deploy new revision (zero-downtime rolling deploy)
         run: |
-          tofu apply -auto-approve \
-            -var "project_id=${{ vars.GCP_PROJECT_ID }}" \
-            -var "image_tag=${{ github.sha }}" \
-            -var "domain=${{ vars.PUBLIC_DOMAIN }}" \
-            -var "enable_lb=${{ vars.ENABLE_LB || 'false' }}" \
-            -var "restrict_ingress_to_lb=${{ vars.RESTRICT_INGRESS_TO_LB || 'false' }}"
+          # a) Warm up the current revision (no-op if service doesn't exist yet)
+          SERVICE_URL=$(cd practice-app/infra && tofu output -raw service_url 2>/dev/null || echo "")
+          if [[ -n "$SERVICE_URL" ]]; then
+            echo "Warming up current revision at $SERVICE_URL ..."
+            curl -sf --max-time 20 "$SERVICE_URL/api/health" -o /dev/null \
+              && echo "Warm." || echo "Warmup skipped (cold or unreachable — proceeding)."
+          fi
+
+          # b+c) Deploy and wait; gcloud only switches traffic once the new
+          #      revision passes its startup probe.
+          gcloud run deploy "${{ env.IMAGE }}" \
+            --image="${{ env.IMAGE_URI }}" \
+            --region="${{ env.REGION }}" \
+            --quiet
 
       # 4) Seed Firestore (idempotent — overwrites by document ID).
       - name: Install seeder deps

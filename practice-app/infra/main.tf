@@ -51,6 +51,30 @@ resource "google_artifact_registry_repository" "apps" {
   format        = "DOCKER"
   description   = "Container images for sample apps"
 
+  # Keep the 3 most-recent tagged images; delete everything else automatically.
+  # This bounds continuous-vulnerability-scanning costs to a small constant —
+  # every stored image is re-scanned whenever new CVEs are published, so
+  # accumulated untagged/old images are the main cost driver.
+  cleanup_policy_dry_run = false
+
+  cleanup_policies {
+    id     = "keep-last-10-tagged"
+    action = "KEEP"
+    most_recent_versions {
+      keep_count             = 3
+      package_name_prefixes  = []
+    }
+  }
+
+  cleanup_policies {
+    id     = "delete-untagged-after-1d"
+    action = "DELETE"
+    condition {
+      tag_state  = "UNTAGGED"
+      older_than = "86400s" # 1 day — dangling layers from failed/cancelled builds
+    }
+  }
+
   depends_on = [google_project_service.apis]
 }
 
@@ -167,10 +191,13 @@ resource "google_cloud_run_v2_service" "app" {
     google_project_iam_member.runtime_firestore,
   ]
 
-  # Image tag changes are managed by CI (which calls `gcloud run services update`
-  # or re-runs apply with -var image_tag=<sha>); ignore mid-deploy churn.
   lifecycle {
-    ignore_changes = [client, client_version]
+    # client/client_version: set by the provider on every read; changes are noise.
+    # template[0].containers[0].image: managed by gcloud in CI (rolling deploy);
+    # tofu only sets it once at resource creation via local.effective_image.
+    # This prevents the bootstrap step from reverting the live image to the
+    # hello-world placeholder on every deploy.
+    ignore_changes = [client, client_version, template[0].containers[0].image]
   }
 }
 
