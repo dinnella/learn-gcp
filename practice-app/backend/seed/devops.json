@@ -1,0 +1,1352 @@
+[
+  {
+    "id": "devops-1.1-003",
+    "exam": "devops",
+    "section": "DevOps-1.1",
+    "difficulty": "easy",
+    "text": "Which Google Cloud resource lets a network team own subnets and firewall rules in one project while application teams deploy workloads in their own projects against those subnets?",
+    "options": [
+      "VPC Network Peering",
+      "Shared VPC (host project + service projects)",
+      "Cloud NAT",
+      "AWS Transit Gateway"
+    ],
+    "correct_index": 1,
+    "explanation": "Shared VPC is purpose-built for this split-ownership model. Peering connects equals; Cloud NAT is for outbound public traffic; Transit Gateway is AWS.",
+    "doc_links": [
+      {
+        "title": "Shared VPC",
+        "url": "https://cloud.google.com/vpc/docs/shared-vpc"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.1-001",
+    "exam": "devops",
+    "section": "DevOps-1.1",
+    "difficulty": "medium",
+    "text": "Your organization wants centralized control of network policies and shared subnets across many application projects. The networking team owns the network; application teams own their workloads. Which design matches Google's recommended foundation?",
+    "options": [
+      "Give every application project its own VPC and connect them with VPC Network Peering through a central transit project",
+      "A host project with the Shared VPC plus folder-level hierarchical firewall policies; service projects attach for each application team",
+      "Place all teams in a single project, separate workloads by labels, and use IAM Conditions on resource.labels for tenant isolation",
+      "One VPC per application project plus a single Cloud Router instance shared across them via NCC hub-and-spoke"
+    ],
+    "correct_index": 1,
+    "explanation": "Shared VPC + folder-level hierarchical firewall policies is the security-foundations blueprint pattern. VPC Peering scales poorly (n*n) and doesn't centralize firewall rules. Single project violates blast-radius isolation and lets one team's IAM mistake hit everyone. NCC hub-and-spoke is for cross-VPC/on-prem connectivity, not for centralized firewall policy across application teams.",
+    "doc_links": [
+      {
+        "title": "Secure foundation blueprint",
+        "url": "https://cloud.google.com/architecture/security-foundations"
+      },
+      {
+        "title": "Hierarchical firewall policies",
+        "url": "https://cloud.google.com/firewall/docs/firewall-policies"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.1-002",
+    "exam": "devops",
+    "section": "DevOps-1.1",
+    "difficulty": "hard",
+    "text": "An enterprise migrating ~300 projects to GCP needs: (a) per-business-unit chargeback; (b) org-wide security guardrails with BU-level customization; (c) centralized network management; (d) blast-radius isolation per BU; (e) self-service project provisioning that automatically inherits guardrails. Which foundation BEST satisfies ALL five?",
+    "options": [
+      "Flat list of projects under the org node, IAM grants per project",
+      "Folder hierarchy (Bootstrap, Common, BU folders → env folders → projects), Shared VPC host project(s), org policies at the org with folder overrides, separate billing sub-accounts per BU, a Project Factory (Terraform) for self-service",
+      "One mega-project per BU with everything separated by labels",
+      "A separate GCP Organization per BU"
+    ],
+    "correct_index": 1,
+    "explanation": "This is the security-foundations blueprint: folders enable inherited org policies and BU isolation; Shared VPC centralizes networking; per-BU billing sub-accounts enable chargeback; a Project Factory delivers self-service with guardrails baked in. Flat projects defeat inheritance/scale; one project per BU has no isolation; separate Orgs fragment governance.",
+    "doc_links": [
+      {
+        "title": "Security foundations blueprint",
+        "url": "https://cloud.google.com/architecture/security-foundations"
+      },
+      {
+        "title": "Resource hierarchy",
+        "url": "https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy"
+      },
+      {
+        "title": "Terraform example foundation",
+        "url": "https://github.com/terraform-google-modules/terraform-example-foundation"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.2-001",
+    "exam": "devops",
+    "section": "DevOps-1.2",
+    "difficulty": "easy",
+    "text": "You manage GCP infrastructure with Terraform from a CI pipeline. State is stored in a GCS bucket. Which configuration improves resilience against accidental loss of state?",
+    "options": [
+      "Disable bucket versioning to keep state files small",
+      "Enable bucket versioning + uniform bucket-level access + lifecycle rules to retain N old versions",
+      "Store state in the same project as the workloads",
+      "Use local backend on the CI runner and upload to GCS at the end"
+    ],
+    "correct_index": 1,
+    "explanation": "Versioning + UBLA + a retention lifecycle is the standard hardening for TF state buckets.",
+    "doc_links": [
+      {
+        "title": "GCS backend (Terraform)",
+        "url": "https://developer.hashicorp.com/terraform/language/backend/gcs"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.2-003",
+    "exam": "devops",
+    "section": "DevOps-1.2",
+    "difficulty": "medium",
+    "text": "An engineer added a firewall rule via the Cloud Console, bypassing your Terraform pipeline. What is the most appropriate way to detect AND reconcile this drift going forward?",
+    "options": [
+      "Schedule a weekly manual audit of the Console for each project; require engineers to file a ticket when they make a manual change so the platform team can backfill it into Terraform",
+      "Run terraform plan in CI on a schedule and on PRs; investigate any non-empty plan, either import to keep the change or apply to remove it, and restrict Console write access via IAM",
+      "Delete and recreate the project from scratch using the Terraform module so any out-of-band changes are dropped, accepting the brief outage as the cost of consistency",
+      "Disable the Compute Engine firewall API at the org level and require all firewall changes to flow through a custom Cloud Function gated by Cloud Build approvals"
+    ],
+    "correct_index": 1,
+    "explanation": "Periodic terraform plan in CI is the standard drift-detection mechanism; once detected you decide to import (keep) or apply (remove), and IAM restrictions prevent recurrence. Manual audits don't scale and rely on humans self-reporting. Recreating projects is destructive and loses unrelated state. Disabling the firewall API breaks every legitimate workflow and is not how Org Policy or Console access should be constrained.",
+    "doc_links": [
+      {
+        "title": "Terraform: detecting drift",
+        "url": "https://developer.hashicorp.com/terraform/tutorials/state/resource-drift"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.2-002",
+    "exam": "devops",
+    "section": "DevOps-1.2",
+    "difficulty": "hard",
+    "text": "A platform team wants to provide self-service infrastructure for application teams via a curated catalog (e.g. 'GKE cluster', 'Cloud SQL instance') with guardrails enforced. Which approach aligns with Google's platform-engineering recommendation?",
+    "options": [
+      "Give application teams Owner role on their own projects and let them write Terraform from scratch",
+      "Build a service catalog using Service Catalog and/or Config Controller with curated Terraform/Config Connector blueprints",
+      "Email the platform team to provision each resource manually",
+      "Use only Cloud Console click-ops"
+    ],
+    "correct_index": 1,
+    "explanation": "Curated, opinionated blueprints exposed via Service Catalog or Config Controller (KRM/Config Connector) is the platform-engineering pattern Google recommends.",
+    "doc_links": [
+      {
+        "title": "Service Catalog",
+        "url": "https://cloud.google.com/service-catalog/docs/overview"
+      },
+      {
+        "title": "Config Connector",
+        "url": "https://cloud.google.com/config-connector/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.3-001",
+    "exam": "devops",
+    "section": "DevOps-1.3",
+    "difficulty": "easy",
+    "text": "Your CI workflow needs to authenticate to Google Cloud from GitHub Actions without storing a long-lived service-account key as a GitHub secret. What is the recommended pattern?",
+    "options": [
+      "Use a JSON service-account key stored in a GitHub encrypted secret",
+      "Use Workload Identity Federation: GitHub OIDC token → Google Cloud short-lived credential via google-github-actions/auth",
+      "Embed a refresh token in the workflow file",
+      "Use gcloud user credentials interactively"
+    ],
+    "correct_index": 1,
+    "explanation": "Workload Identity Federation is the keyless pattern recommended by Google and used by this repo's bootstrap.",
+    "doc_links": [
+      {
+        "title": "google-github-actions/auth",
+        "url": "https://github.com/google-github-actions/auth"
+      },
+      {
+        "title": "WIF with GitHub",
+        "url": "https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.3-002",
+    "exam": "devops",
+    "section": "DevOps-1.3",
+    "difficulty": "medium",
+    "text": "You want to prevent secrets (API keys, private keys) from ever reaching Artifact Registry by catching them at PR time. Which control is most effective?",
+    "options": [
+      "Run an Artifact Analysis vulnerability scan on every pushed image and delete it from Artifact Registry if a credential pattern is found in the layer manifest",
+      "Add a secret-scanner step (gitleaks/trufflehog) to the Cloud Build PR pipeline that runs against the diff and fails the build on detection before the image is built",
+      "Rely on a documented PR review checklist that asks reviewers to grep for AWS_, GOOGLE_APPLICATION_CREDENTIALS, and BEGIN PRIVATE KEY in the changed files",
+      "Encrypt the entire source repository at rest with a CMEK so any leaked credentials are protected by Cloud KMS access controls in production"
+    ],
+    "correct_index": 1,
+    "explanation": "Catching the secret in the PR pipeline stops it before it ever lands in Git history or an image. Post-push image scanning is reactive — the secret is already in Git and possibly published. Reviewer checklists are unreliable for high-volume repos. CMEK on the repo encrypts data at rest but does nothing to prevent committing plaintext secrets that any read-permitted user can see.",
+    "doc_links": [
+      {
+        "title": "Cloud Build community builders",
+        "url": "https://github.com/GoogleCloudPlatform/cloud-builders-community"
+      },
+      {
+        "title": "Artifact Analysis",
+        "url": "https://cloud.google.com/artifact-analysis/docs/artifact-analysis"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.3-003",
+    "exam": "devops",
+    "section": "DevOps-1.3",
+    "difficulty": "hard",
+    "text": "A team's CI builds for many GCP projects. Requirements: (1) no long-lived service-account keys anywhere; (2) per-environment principle of least privilege (dev pipeline can't deploy to prod); (3) auditable mapping from a specific GitHub Actions workflow run to the GCP credential it used; (4) cross-org reuse (multiple GitHub orgs). Which design BEST meets all four?",
+    "options": [
+      "One JSON SA key per environment, stored as a GitHub org secret",
+      "A single Workload Identity Federation pool with attribute conditions binding `repository`/`workflow`/`environment` claims to per-env service accounts; each env's SA has narrow IAM; provider config logs the OIDC subject for audit",
+      "Personal access tokens for each developer used by the workflow",
+      "Disable WIF and use `gcloud auth login` interactively in CI"
+    ],
+    "correct_index": 1,
+    "explanation": "WIF attribute conditions on `repository`, `workflow`, and `environment` allow fine-grained per-env mappings without keys; OIDC subjects appear in Cloud Audit Logs for traceability; pools can accept multiple GitHub orgs as providers. Stored SA keys and PATs both violate the 'no long-lived key' rule.",
+    "doc_links": [
+      {
+        "title": "WIF with GitHub",
+        "url": "https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines"
+      },
+      {
+        "title": "WIF attribute conditions",
+        "url": "https://cloud.google.com/iam/docs/workload-identity-federation#conditions"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.4-002",
+    "exam": "devops",
+    "section": "DevOps-1.4",
+    "difficulty": "easy",
+    "text": "Which Google Cloud feature continuously syncs Kubernetes manifests from a Git repository to one or more GKE clusters and reconciles drift back to the desired state?",
+    "options": [
+      "Cloud Deploy",
+      "Config Sync (part of Anthos Config Management)",
+      "Cloud Build triggers",
+      "Artifact Registry"
+    ],
+    "correct_index": 1,
+    "explanation": "Config Sync is the GitOps controller for GKE/fleets. Cloud Deploy orchestrates progressive delivery (different concern). Build triggers run pipelines; Artifact Registry stores artifacts.",
+    "doc_links": [
+      {
+        "title": "Config Sync overview",
+        "url": "https://cloud.google.com/kubernetes-engine/enterprise/config-sync/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.4-001",
+    "exam": "devops",
+    "section": "DevOps-1.4",
+    "difficulty": "medium",
+    "text": "You manage many GKE clusters across an enterprise and want consistent policies, multi-cluster service discovery, and centralized config management. Which feature should you adopt?",
+    "options": [
+      "GKE fleets with Config Sync and Policy Controller",
+      "A single mega-cluster spanning all teams",
+      "Manual kubectl apply from a jumphost",
+      "ArgoCD instances per cluster with no central control plane"
+    ],
+    "correct_index": 0,
+    "explanation": "GKE fleets are the unit of multi-cluster management; Config Sync (GitOps) and Policy Controller (OPA Gatekeeper) deliver centralized config and policy.",
+    "doc_links": [
+      {
+        "title": "GKE fleets",
+        "url": "https://cloud.google.com/kubernetes-engine/fleet-management/docs"
+      }
+    ]
+  },
+  {
+    "id": "devops-1.4-003",
+    "exam": "devops",
+    "section": "DevOps-1.4",
+    "difficulty": "hard",
+    "text": "A platform team manages 30 GKE clusters across regions and tenants. Requirements: (1) one source of truth for cluster + namespace configs (GitOps); (2) prevent non-compliant resources at admission (no privileged pods, required labels); (3) per-team namespaces with quotas; (4) centralized policy reporting across the fleet. Which combination is BEST?",
+    "options": [
+      "kubectl apply from each engineer's laptop; trust but verify",
+      "Add the clusters to a GKE fleet; enable Config Sync (root + namespace repos), Policy Controller (constraint templates for pod security + label policies), tenant-namespace ResourceQuotas, and the fleet-wide Policy Controller dashboard for posture",
+      "Helm-only deployments with no admission controls",
+      "ArgoCD per cluster with no cross-cluster reporting"
+    ],
+    "correct_index": 1,
+    "explanation": "Config Sync = GitOps source of truth; Policy Controller = OPA Gatekeeper for admission constraints; ResourceQuotas isolate tenants; the fleet Policy Controller dashboard gives unified posture. The other options each miss admission control or central reporting.",
+    "doc_links": [
+      {
+        "title": "Policy Controller",
+        "url": "https://cloud.google.com/kubernetes-engine/enterprise/policy-controller/docs/overview"
+      },
+      {
+        "title": "GKE fleets",
+        "url": "https://cloud.google.com/kubernetes-engine/fleet-management/docs"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.1-002",
+    "exam": "devops",
+    "section": "DevOps-2.1",
+    "difficulty": "easy",
+    "text": "Which deployment strategy gradually shifts a small percentage of traffic to a new revision, monitors health, then progresses to full traffic — minimizing blast radius?",
+    "options": [
+      "Recreate",
+      "Canary",
+      "Big-bang",
+      "AWS CodeDeploy LinearAllAtOnce"
+    ],
+    "correct_index": 1,
+    "explanation": "Canary releases progressively shift traffic with health checks at each step. Recreate causes downtime; big-bang has maximum blast radius; the AWS option is not a GCP service.",
+    "doc_links": [
+      {
+        "title": "Canary deployments (Cloud Deploy)",
+        "url": "https://cloud.google.com/deploy/docs/deployment-strategies/canary"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.1-001",
+    "exam": "devops",
+    "section": "DevOps-2.1",
+    "difficulty": "medium",
+    "text": "You need to roll out a new Cloud Run revision to 10% of traffic, watch SLO health for 30 minutes, then progress to 100%. Which Google Cloud service orchestrates this canary release?",
+    "options": [
+      "Cloud Build with a custom shell step calling gcloud run services update-traffic on a timer between phases",
+      "A Cloud Deploy delivery pipeline configured with a canary strategy and a verify phase that queries the SLO",
+      "Cloud Run traffic splitting set manually in the console between revisions, with operators watching SLOs by hand",
+      "GKE rolling updates with PodDisruptionBudgets, fronted by a global Application Load Balancer pointing at the Cloud Run service"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Deploy is the release orchestration product; canary strategy declaratively defines phases (e.g. 10% → 100%) with verify jobs between them. Cloud Build can drive deploys but isn't a release orchestrator with native canary phases. Manual traffic splitting + manual watching has no automation or audit trail. Rolling updates apply to GKE, not Cloud Run, and an LB in front of Cloud Run doesn't change the deployment unit.",
+    "doc_links": [
+      {
+        "title": "Cloud Deploy: canary deployments",
+        "url": "https://cloud.google.com/deploy/docs/deployment-strategies/canary"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.1-003",
+    "exam": "devops",
+    "section": "DevOps-2.1",
+    "difficulty": "hard",
+    "text": "A team rolls out a new GKE service with these requirements: (1) progressive delivery 5% → 25% → 100% with a 30-minute soak at each step; (2) automatic abort if SLO error budget burn rate exceeds 5×; (3) reproducible deploy artifacts with attestations; (4) one approval gate before prod. Which Google Cloud design BEST fits?",
+    "options": [
+      "kubectl apply with manual percentage edits; pager on errors",
+      "Cloud Deploy pipeline with a canary strategy (5/25/100), `verify` jobs that query Cloud Monitoring SLO burn rate and fail (auto-abort); Binary Authorization attestor on the image; manual `promote` approval before the prod target",
+      "Blue/green with no health gating",
+      "Recreate strategy in production"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Deploy canary supports phased percentages; `verify` jobs can call Monitoring and fail to abort the rollout; Binary Authorization gives the attestation requirement; promotion approvals satisfy the manual gate. kubectl/recreate/blue-green-without-gating each miss multiple requirements.",
+    "doc_links": [
+      {
+        "title": "Cloud Deploy canary",
+        "url": "https://cloud.google.com/deploy/docs/deployment-strategies/canary"
+      },
+      {
+        "title": "Cloud Deploy verify",
+        "url": "https://cloud.google.com/deploy/docs/verify-deployment"
+      },
+      {
+        "title": "Binary Authorization with Cloud Deploy",
+        "url": "https://cloud.google.com/deploy/docs/securing/binary-authorization"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.2-002",
+    "exam": "devops",
+    "section": "DevOps-2.2",
+    "difficulty": "easy",
+    "text": "Which deployment pattern is characterized by maintaining two full production environments and switching all traffic from one to the other in a single cutover, with the prior environment kept warm for instant rollback?",
+    "options": [
+      "Canary",
+      "Blue/green",
+      "Rolling update",
+      "Recreate"
+    ],
+    "correct_index": 1,
+    "explanation": "Blue/green keeps two parallel stacks and cuts over via a router/LB change. Canary shifts a small percentage gradually; rolling does instance-by-instance; recreate causes downtime.",
+    "doc_links": [
+      {
+        "title": "Application deployment & testing strategies",
+        "url": "https://cloud.google.com/architecture/application-deployment-and-testing-strategies"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.2-001",
+    "exam": "devops",
+    "section": "DevOps-2.2",
+    "difficulty": "medium",
+    "text": "You're rolling out a backwards-incompatible API change. Which deployment pattern lets you have both old and new versions running side-by-side and shift users gradually with the ability to cut back instantly?",
+    "options": [
+      "Recreate strategy",
+      "Blue/green deployment with a router/load-balancer-controlled cutover",
+      "In-place update",
+      "Big-bang deploy"
+    ],
+    "correct_index": 1,
+    "explanation": "Blue/green keeps both stacks fully provisioned. The cutover is a router config change, and rollback is the inverse change — instant.",
+    "doc_links": [
+      {
+        "title": "Application deployment & testing strategies",
+        "url": "https://cloud.google.com/architecture/application-deployment-and-testing-strategies"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.2-003",
+    "exam": "devops",
+    "section": "DevOps-2.2",
+    "difficulty": "hard",
+    "text": "A backwards-incompatible API v2 must be released alongside v1 for 60 days. Constraints: (1) shared underlying database; (2) zero downtime; (3) per-tenant feature-flag opt-in to v2; (4) ability to dark-launch v2 read paths to all tenants for shadow comparison before any tenant opts in; (5) instant kill-switch on v2. Which strategy BEST fits?",
+    "options": [
+      "Big-bang cutover during a maintenance window",
+      "Run v1 and v2 deployments behind a global ALB; use a feature-flag service (e.g. config-driven) for tenant opt-in; mirror a copy of read traffic to v2 (shadow) via traffic-mirroring or app-level fanout; use the expand–contract DB migration pattern (additive schema first, dual-write, then contract); flag-based instant kill-switch",
+      "Replace v1 with v2 atomically and rely on rollbacks",
+      "Deploy v2 only to a different region and use DNS round-robin"
+    ],
+    "correct_index": 1,
+    "explanation": "Expand–contract makes the shared DB safe; ALB + feature flags handle tenant opt-in and kill-switch; shadow traffic enables comparison without user impact. The other options either cause downtime, lack the kill-switch, or break sticky sessions.",
+    "doc_links": [
+      {
+        "title": "Application deployment & testing strategies",
+        "url": "https://cloud.google.com/architecture/application-deployment-and-testing-strategies"
+      },
+      {
+        "title": "Database schema migration patterns",
+        "url": "https://cloud.google.com/architecture/database-migration-concepts-principles-part-1"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.3-002",
+    "exam": "devops",
+    "section": "DevOps-2.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service automatically starts a CI pipeline when commits land on a specific branch of a connected source repository?",
+    "options": [
+      "Cloud Scheduler",
+      "Cloud Build triggers",
+      "Cloud Run jobs",
+      "Eventarc only"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Build triggers connect to GitHub/GitLab/Bitbucket/Cloud Source and start a build on configured branch/tag patterns. Cloud Scheduler runs cron, not VCS events; Cloud Run jobs are batch tasks; Eventarc routes events but doesn't define the build itself.",
+    "doc_links": [
+      {
+        "title": "Cloud Build triggers",
+        "url": "https://cloud.google.com/build/docs/automating-builds/create-manage-triggers"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.3-001",
+    "exam": "devops",
+    "section": "DevOps-2.3",
+    "difficulty": "medium",
+    "text": "Your team wants integrated, opinionated CI/CD on GCP that builds container images, runs tests, scans them for vulnerabilities, and stores artifacts ready for Cloud Deploy to roll out. Which pair fits best?",
+    "options": [
+      "Cloud Build (CI: build/test/scan/push) + Artifact Registry (storage) + Cloud Deploy (CD)",
+      "Cloud Functions only",
+      "GKE custom Tekton pipeline + Container Registry",
+      "Cloud Workstations"
+    ],
+    "correct_index": 0,
+    "explanation": "Cloud Build → Artifact Registry → Cloud Deploy is the canonical native trio. Container Registry is deprecated.",
+    "doc_links": [
+      {
+        "title": "Cloud Build + AR + Cloud Deploy reference",
+        "url": "https://cloud.google.com/architecture/devops-pipeline"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.3-003",
+    "exam": "devops",
+    "section": "DevOps-2.3",
+    "difficulty": "hard",
+    "text": "A regulated team needs CI that: (1) builds in an isolated, ephemeral worker (no shared mutable state); (2) signs every artifact with SLSA L3-grade provenance; (3) blocks builds that pull from non-allowlisted base images; (4) integrates with Artifact Registry remote repos to proxy upstream packages; (5) zero long-lived credentials. Which Google Cloud setup BEST satisfies all five?",
+    "options": [
+      "Self-hosted Jenkins on a long-running VM with shared workspaces",
+      "Cloud Build with private pools (ephemeral workers), SLSA build provenance enabled, an org policy + custom build step that fails on disallowed base images, Artifact Registry remote/virtual repos as the only proxy, and Workload Identity Federation for any external auth",
+      "GitHub-hosted runners with stored SA JSON keys",
+      "Bash scripts run on developers' laptops"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Build private pools give ephemeral isolated workers; SLSA provenance is built-in; Artifact Registry remote repos proxy upstreams under your control; an allowlist check fails non-compliant builds; WIF removes long-lived keys. The other options violate at least one of the five constraints.",
+    "doc_links": [
+      {
+        "title": "Cloud Build private pools",
+        "url": "https://cloud.google.com/build/docs/private-pools/private-pools-overview"
+      },
+      {
+        "title": "Cloud Build SLSA provenance",
+        "url": "https://cloud.google.com/build/docs/securing-builds/view-build-provenance"
+      },
+      {
+        "title": "Artifact Registry remote repositories",
+        "url": "https://cloud.google.com/artifact-registry/docs/repositories/remote-overview"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.4-001",
+    "exam": "devops",
+    "section": "DevOps-2.4",
+    "difficulty": "easy",
+    "text": "Your security policy requires that only container images signed by your CI's attestor can be deployed to GKE production clusters. Which Google Cloud service enforces this at admission time?",
+    "options": [
+      "Artifact Registry vulnerability scanning",
+      "Binary Authorization with an attestor and a cluster policy that requires the attestation",
+      "Cloud Armor with WAF rules",
+      "VPC Service Controls"
+    ],
+    "correct_index": 1,
+    "explanation": "Binary Authorization is the admission controller that enforces signed-image requirements at deploy time on GKE and Cloud Run.",
+    "doc_links": [
+      {
+        "title": "Binary Authorization",
+        "url": "https://cloud.google.com/binary-authorization/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.4-002",
+    "exam": "devops",
+    "section": "DevOps-2.4",
+    "difficulty": "medium",
+    "text": "Which framework defines hierarchical assurance levels for software supply chain integrity, and which Google Cloud product helps you produce attestations to satisfy higher levels?",
+    "options": [
+      "SLSA framework; Cloud Build emits SLSA build provenance and Binary Authorization gates deploy on attestors signed against that provenance",
+      "SOC 2 framework; Security Command Center collects evidence and emits attestations for deployments via a Cloud Run admission webhook",
+      "PCI DSS framework; Cloud Armor's adaptive protection emits per-build attestations consumed by GKE Policy Controller",
+      "ISO 27001 framework; Cloud KMS signs each container image at build time and the signature is verified by Artifact Registry on pull"
+    ],
+    "correct_index": 0,
+    "explanation": "SLSA is the supply-chain integrity framework; Cloud Build emits SLSA-compliant build provenance, and Binary Authorization attestors gate deployment on it. SOC 2/PCI DSS/ISO 27001 are general assurance/compliance frameworks that don't define supply-chain integrity levels, and the products listed (SCC, Cloud Armor, KMS) don't produce build provenance.",
+    "doc_links": [
+      {
+        "title": "SLSA framework",
+        "url": "https://slsa.dev"
+      },
+      {
+        "title": "Cloud Build SLSA provenance",
+        "url": "https://cloud.google.com/build/docs/securing-builds/view-build-provenance"
+      }
+    ]
+  },
+  {
+    "id": "devops-2.4-003",
+    "exam": "devops",
+    "section": "DevOps-2.4",
+    "difficulty": "hard",
+    "text": "A regulated team must guarantee that production GKE only runs images that are: (1) built by their Cloud Build pipeline; (2) have SLSA-compliant provenance; (3) have NO critical CVEs at deploy time; (4) progress through dev → staging → prod with manual approval and full audit trail. Which combination meets ALL four?",
+    "options": [
+      "Cloud Build with provenance; Artifact Registry with vulnerability scanning; Binary Authorization policy requiring the build attestor AND a vulnerability check attestor; Cloud Deploy pipeline with promotion approvals (audited via Cloud Audit Logs)",
+      "Manual `kubectl apply` after a code review",
+      "Cloud Build only; rely on engineers to check CVEs before deploy",
+      "Artifact Registry vulnerability scanning only"
+    ],
+    "correct_index": 0,
+    "explanation": "Binary Authorization composes multiple required attestors (build provenance + vulnerability gate); Cloud Deploy provides structured promotion with approvals; Audit Logs record every promotion. Manual apply lacks gating and audit; CB-only or scan-only each miss enforcement at admission.",
+    "doc_links": [
+      {
+        "title": "Binary Authorization",
+        "url": "https://cloud.google.com/binary-authorization/docs/overview"
+      },
+      {
+        "title": "Cloud Deploy approvals",
+        "url": "https://cloud.google.com/deploy/docs/promote-release#require-approval"
+      },
+      {
+        "title": "Artifact Analysis vulnerability scanning",
+        "url": "https://cloud.google.com/artifact-analysis/docs/os-scanning-automatically"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.1-002",
+    "exam": "devops",
+    "section": "DevOps-3.1",
+    "difficulty": "easy",
+    "text": "What is an SLI vs SLO vs SLA in SRE practice?",
+    "options": [
+      "SLI = the measurement (e.g. % requests <300ms); SLO = the target (e.g. 99.9% over 28d); SLA = the contractual obligation with consequences",
+      "All three are interchangeable terms",
+      "SLI is for internal teams only and never measured",
+      "SLO is for customers; SLI is for engineers; SLA is for executives only"
+    ],
+    "correct_index": 0,
+    "explanation": "SLI = indicator; SLO = internal target; SLA = externally promised number with consequences. SLOs are typically tighter than SLAs.",
+    "doc_links": [
+      {
+        "title": "Service level objectives",
+        "url": "https://sre.google/sre-book/service-level-objectives/"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.1-003",
+    "exam": "devops",
+    "section": "DevOps-3.1",
+    "difficulty": "medium",
+    "text": "A team has burned ~40% of their monthly 99.9% availability error budget in the first week due to two incidents. The next sprint is packed with risky feature work. Per SRE practice, what is the appropriate response?",
+    "options": [
+      "Ignore the budget and ship the features anyway",
+      "Freeze risky feature work for the remainder of the period and prioritize reliability fixes; resume features when the budget recovers",
+      "Loosen the SLO to 99.5% so the budget appears healthier",
+      "Add more dashboards but no behavioral change"
+    ],
+    "correct_index": 1,
+    "explanation": "The whole point of an error budget is to create an explicit incentive to slow feature work when reliability suffers. Loosening the SLO is gaming the metric; ignoring or only adding dashboards changes nothing.",
+    "doc_links": [
+      {
+        "title": "Embracing risk / error budgets",
+        "url": "https://sre.google/sre-book/embracing-risk/"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.1-001",
+    "exam": "devops",
+    "section": "DevOps-3.1",
+    "difficulty": "hard",
+    "text": "A team's SLO is 99.9% availability over 28 days. They observe a sustained burn rate of 6× and want an alert that fires fast enough to act before the budget is exhausted, but not so noisily that minor blips page on-call. What's the recommended approach?",
+    "options": [
+      "Page on every error",
+      "Multi-window, multi-burn-rate alerting (e.g. fast-burn 14.4× over 1h AND slow-burn 6× over 6h)",
+      "Alert only on weekly budget review",
+      "Disable alerts and check the dashboard each morning"
+    ],
+    "correct_index": 1,
+    "explanation": "Multi-burn-rate alerting reduces false positives while still meeting time-to-detect goals. Cloud Monitoring SLOs implement this directly.",
+    "doc_links": [
+      {
+        "title": "SRE Workbook — Alerting on SLOs",
+        "url": "https://sre.google/workbook/alerting-on-slos/"
+      },
+      {
+        "title": "Cloud Monitoring SLOs",
+        "url": "https://cloud.google.com/monitoring/service-monitoring/using-slo"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.2-002",
+    "exam": "devops",
+    "section": "DevOps-3.2",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service runs jobs on a recurring cron schedule and can target HTTP endpoints, Pub/Sub, and App Engine?",
+    "options": [
+      "Cloud Tasks",
+      "Cloud Scheduler",
+      "Cloud Workflows",
+      "Eventarc"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Scheduler is the managed cron service. Cloud Tasks is for asynchronous task execution; Workflows orchestrates multi-step flows; Eventarc routes event-driven invocations.",
+    "doc_links": [
+      {
+        "title": "Cloud Scheduler overview",
+        "url": "https://cloud.google.com/scheduler/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.2-001",
+    "exam": "devops",
+    "section": "DevOps-3.2",
+    "difficulty": "medium",
+    "text": "You need to provision GPU capacity for a 6-hour training job at a specific time tomorrow, in a region where on-demand GPUs are frequently unavailable. Which approach is most appropriate?",
+    "options": [
+      "Have a Cloud Scheduler job retry on-demand provisioning every minute until the GPU request succeeds in the target region",
+      "Use Dynamic Workload Scheduler in calendar mode to request a reservation for the required GPUs at the desired start time",
+      "Provision a 1-year committed-use discount for the GPU SKU to guarantee capacity in that region for the one-time job",
+      "Rewrite the job to run on Spot GPU VMs with no checkpointing and accept restarts on preemption, since Spot quota is usually available"
+    ],
+    "correct_index": 1,
+    "explanation": "Dynamic Workload Scheduler is purpose-built for time-bound AI/HPC capacity — calendar mode for known windows, flex-start for queued jobs. Polling for on-demand wastes time and isn't a capacity guarantee. A 1-year CUD over-commits for a single 6-hour job. Spot without checkpoints will lose all progress on every preemption.",
+    "doc_links": [
+      {
+        "title": "Dynamic Workload Scheduler",
+        "url": "https://cloud.google.com/blog/products/compute/introducing-dynamic-workload-scheduler"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.2-003",
+    "exam": "devops",
+    "section": "DevOps-3.2",
+    "difficulty": "hard",
+    "text": "An ML platform must serve burst training jobs that need 8 H100 GPUs each, on-demand within 5 minutes, in a region where on-demand H100 capacity is scarce. Constraints: (1) jobs are not fault-tolerant (no Spot); (2) cost must beat 1-year CUD purchase; (3) capacity must be guaranteed for the next 8 weeks. Which approach BEST fits?",
+    "options": [
+      "Buy 1-year CUDs for 8 H100s",
+      "Use Dynamic Workload Scheduler in `flex-start` mode for queued capacity, plus a future reservation for the 8-week window when capacity must be guaranteed; fall back to on-demand otherwise",
+      "Rely on on-demand only and pray",
+      "Rewrite jobs for Spot VMs"
+    ],
+    "correct_index": 1,
+    "explanation": "DWS flex-start queues for capacity efficiently for non-urgent jobs; future reservations explicitly guarantee capacity for a known window without committing for a year. CUD is too long; on-demand isn't reliable in scarce regions; Spot violates the no-fault-tolerance constraint.",
+    "doc_links": [
+      {
+        "title": "Dynamic Workload Scheduler",
+        "url": "https://cloud.google.com/blog/products/compute/introducing-dynamic-workload-scheduler"
+      },
+      {
+        "title": "Future reservations",
+        "url": "https://cloud.google.com/compute/docs/instances/future-reservations-overview"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.3-001",
+    "exam": "devops",
+    "section": "DevOps-3.3",
+    "difficulty": "easy",
+    "text": "An incident is in progress: a new release is causing elevated 5xx errors. The fastest mitigation that respects the SRE principle 'mitigate before diagnose' is:",
+    "options": [
+      "Open a debugging session and grep logs",
+      "Roll back the release to the previous known-good revision and then investigate",
+      "Email all stakeholders and wait for an architect to weigh in",
+      "Disable monitoring to silence the alert"
+    ],
+    "correct_index": 1,
+    "explanation": "SRE practice prioritizes user-visible mitigation (rollback / drain / redirect / capacity) before root-cause analysis.",
+    "doc_links": [
+      {
+        "title": "Managing incidents (SRE book)",
+        "url": "https://sre.google/sre-book/managing-incidents/"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.3-002",
+    "exam": "devops",
+    "section": "DevOps-3.3",
+    "difficulty": "medium",
+    "text": "A new Cloud Run revision is deployed and 5xx errors spike. Which fastest-to-root-cause approach combines the right Google Cloud signals?",
+    "options": [
+      "Open a debugger and step through the application",
+      "In Cloud Monitoring view request count and error rate grouped by Cloud Run revision; in Error Reporting look for new exception groups; in Cloud Logging filter by `resource.type=cloud_run_revision` and `severity>=ERROR` for the suspect revision",
+      "Wait for the next status page update",
+      "Run a load test against the old revision"
+    ],
+    "correct_index": 1,
+    "explanation": "Grouping by revision in Monitoring isolates the offending version; Error Reporting clusters new exception types; revision-scoped log filtering finds the actual stack traces. The other options don't accelerate diagnosis.",
+    "doc_links": [
+      {
+        "title": "Cloud Run monitoring",
+        "url": "https://cloud.google.com/run/docs/monitoring"
+      },
+      {
+        "title": "Error Reporting",
+        "url": "https://cloud.google.com/error-reporting/docs"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.3-003",
+    "exam": "devops",
+    "section": "DevOps-3.3",
+    "difficulty": "hard",
+    "text": "A Sev-1 incident is in progress: 5xx errors are spiking after a deploy, but the on-call notices the new revision also depends on a freshly migrated database schema. Three hypotheses are open. Per SRE practice, which sequence is BEST?",
+    "options": [
+      "Convene a war room and start root-cause analysis before any user-facing action",
+      "Immediately mitigate by rolling back to the prior known-good revision (and revert the DB migration if reversible) to stop user pain; communicate status; THEN diagnose using logs/traces/metrics filtered to the suspect revision; write a blameless postmortem",
+      "Page more engineers and wait",
+      "Scale up replicas and hope the errors clear"
+    ],
+    "correct_index": 1,
+    "explanation": "SRE: mitigate → communicate → diagnose → postmortem. Rollback (and reversible DB revert) is the standard mitigation. Convening RCA first prolongs user pain; scaling without diagnosis is cargo-cult.",
+    "doc_links": [
+      {
+        "title": "Managing incidents (SRE book)",
+        "url": "https://sre.google/sre-book/managing-incidents/"
+      },
+      {
+        "title": "Postmortem culture",
+        "url": "https://sre.google/sre-book/postmortem-culture/"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.4-001",
+    "exam": "devops",
+    "section": "DevOps-3.4",
+    "difficulty": "easy",
+    "text": "After a Sev-1 incident, what is the SRE-recommended best practice for postmortems?",
+    "options": [
+      "Identify the engineer responsible and discipline them",
+      "Write a blameless postmortem focused on systemic causes and concrete action items, share it widely",
+      "Skip the postmortem if the issue is already fixed",
+      "Keep the postmortem confidential to a small executive group"
+    ],
+    "correct_index": 1,
+    "explanation": "Blameless postmortems focus on the system, not individuals, producing actionable improvements.",
+    "doc_links": [
+      {
+        "title": "Postmortem culture",
+        "url": "https://sre.google/sre-book/postmortem-culture/"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.4-002",
+    "exam": "devops",
+    "section": "DevOps-3.4",
+    "difficulty": "medium",
+    "text": "Which postmortem action item is MOST likely to prevent recurrence of a class of incidents (vs. only the specific incident)?",
+    "options": [
+      "Add a runbook entry describing the manual mitigation",
+      "Add an automated guardrail in CI/CD or platform code that makes the failure mode impossible (or detected pre-prod)",
+      "Send a company-wide email about the incident",
+      "Increase on-call rotation size"
+    ],
+    "correct_index": 1,
+    "explanation": "Systemic, automation-based action items (CI checks, admission policies, platform invariants) prevent the entire class of failure. Runbooks help react, emails inform, larger rotations spread load — none address the root systemic gap.",
+    "doc_links": [
+      {
+        "title": "Postmortem culture",
+        "url": "https://sre.google/sre-book/postmortem-culture/"
+      }
+    ]
+  },
+  {
+    "id": "devops-3.4-003",
+    "exam": "devops",
+    "section": "DevOps-3.4",
+    "difficulty": "hard",
+    "text": "After three Sev-1s in 30 days from the same root cause class (a missing pre-deploy schema check), which set of action items BEST follows SRE postmortem guidance?",
+    "options": [
+      "Email a reminder to all engineers to be careful",
+      "Add an automated pre-deploy schema-compatibility check in the CI/CD pipeline that fails the build on incompatibility; add a Cloud Deploy `verify` job that runs the check; track an SLO on schema-related incidents; add a blameless postmortem retrospective scheduled for 60 days",
+      "Forbid all schema changes",
+      "Add a runbook step that the on-call must remember during deploys"
+    ],
+    "correct_index": 1,
+    "explanation": "Systemic action items (pipeline check, verify job, tracked SLO, follow-up) prevent the entire class. Reminders and runbook-only steps depend on humans remembering at the wrong time; banning schema changes is impractical.",
+    "doc_links": [
+      {
+        "title": "Postmortem culture",
+        "url": "https://sre.google/sre-book/postmortem-culture/"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.1-002",
+    "exam": "devops",
+    "section": "DevOps-4.1",
+    "difficulty": "easy",
+    "text": "You need a Cloud Monitoring alerting policy that pages PagerDuty when CPU exceeds 80% for 5 minutes on a Compute Engine MIG. Which two pieces are required?",
+    "options": [
+      "A metric-threshold condition (compute.googleapis.com/instance/cpu/utilization > 0.8 for 5m) AND a notification channel of type PagerDuty",
+      "A log-based metric only",
+      "A Cloud Function only",
+      "An Eventarc trigger only"
+    ],
+    "correct_index": 0,
+    "explanation": "Alerting policies are condition + notification channel. PagerDuty is a first-class notification channel type. The other items don't deliver alerting on their own.",
+    "doc_links": [
+      {
+        "title": "Alerting policies",
+        "url": "https://cloud.google.com/monitoring/alerts"
+      },
+      {
+        "title": "Notification channels",
+        "url": "https://cloud.google.com/monitoring/support/notification-options"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.1-001",
+    "exam": "devops",
+    "section": "DevOps-4.1",
+    "difficulty": "medium",
+    "text": "You operate a hybrid environment: GKE on Google Cloud and Kubernetes clusters on-prem. You want a single, OpenTelemetry-compatible metrics backend with Prometheus query language. Which option fits?",
+    "options": [
+      "Run a separate Prometheus + Grafana stack per cluster, manually federated",
+      "Google Cloud Managed Service for Prometheus, with collectors running in each cluster",
+      "Cloud Logging only — metrics aren't needed",
+      "Send all metrics to BigQuery via Pub/Sub"
+    ],
+    "correct_index": 1,
+    "explanation": "Managed Service for Prometheus is the GCP-native, PromQL-compatible metrics backend designed for hybrid environments.",
+    "doc_links": [
+      {
+        "title": "Managed Service for Prometheus",
+        "url": "https://cloud.google.com/stackdriver/docs/managed-prometheus"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.1-003",
+    "exam": "devops",
+    "section": "DevOps-4.1",
+    "difficulty": "hard",
+    "text": "A platform team wants metrics that: (1) use PromQL; (2) are queryable globally across many projects; (3) retain raw resolution for 6 weeks and downsampled for 24 months; (4) accept Prometheus remote_write from on-prem clusters too. Which design BEST fits?",
+    "options": [
+      "Run a self-managed Prometheus + Thanos cluster on GKE",
+      "Google Cloud Managed Service for Prometheus with a metrics scope spanning all projects; collectors in each cluster (in-cluster managed collection) and remote_write from on-prem; rely on GMP's long retention",
+      "Cloud Logging only — metrics aren't needed",
+      "Send all metrics to BigQuery via Pub/Sub and query with SQL"
+    ],
+    "correct_index": 1,
+    "explanation": "GMP is PromQL-compatible, supports remote_write from on-prem, has long native retention, and metrics scopes provide cross-project query. Self-managed Thanos is expensive ops; Logging isn't a metrics store; raw BigQuery loses PromQL.",
+    "doc_links": [
+      {
+        "title": "Managed Service for Prometheus",
+        "url": "https://cloud.google.com/stackdriver/docs/managed-prometheus"
+      },
+      {
+        "title": "Metrics scopes",
+        "url": "https://cloud.google.com/monitoring/settings/multiple-projects"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.2-001",
+    "exam": "devops",
+    "section": "DevOps-4.2",
+    "difficulty": "easy",
+    "text": "Your Cloud Logging bill has grown sharply. Investigation shows that ~80% of ingestion is from one verbose application's INFO logs, which are not used for alerting or audit. What is the most cost-effective mitigation?",
+    "options": [
+      "Delete the logs after ingestion using a TTL policy",
+      "Add an exclusion filter in the _Default sink to drop those INFO logs before ingest",
+      "Switch the application to write logs to Cloud Storage manually",
+      "Move all workloads to a different region"
+    ],
+    "correct_index": 1,
+    "explanation": "Logging is billed primarily on ingestion volume. An exclusion filter on the _Default sink drops matching logs before the ingest meter runs.",
+    "doc_links": [
+      {
+        "title": "Cloud Logging exclusions",
+        "url": "https://cloud.google.com/logging/docs/routing/overview#exclusions"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.2-002",
+    "exam": "devops",
+    "section": "DevOps-4.2",
+    "difficulty": "medium",
+    "text": "Which Cloud Audit Logs category is enabled by default and free, vs. one that is off by default and incurs ingestion charges when enabled?",
+    "options": [
+      "Admin Activity (default-on, free) vs. Data Access (default-off, billed)",
+      "Both are default-on and free",
+      "Both are default-off and billed",
+      "System Event (default-off) vs. Policy Denied (default-on)"
+    ],
+    "correct_index": 0,
+    "explanation": "Admin Activity audit logs are always enabled and free. Data Access audit logs are off by default and incur Logging ingestion costs when enabled.",
+    "doc_links": [
+      {
+        "title": "Cloud Audit Logs overview",
+        "url": "https://cloud.google.com/logging/docs/audit"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.2-003",
+    "exam": "devops",
+    "section": "DevOps-4.2",
+    "difficulty": "hard",
+    "text": "An organization with 200 GCP projects across many tenants needs: (1) all Admin Activity + Data Access audit logs centralized for 7 years; (2) per-tenant application logs routed to per-tenant BigQuery datasets retained 90 days; (3) drop verbose DEBUG logs to control cost. Which design BEST meets all three?",
+    "options": [
+      "An organization-level aggregated sink to a Cloud Logging bucket (7y retention) for audit logs; project-level sinks filtered by `labels.tenant_id` exporting to per-tenant BigQuery datasets (90-day partition expiry); exclusion filters on the `_Default` sink to drop DEBUG before ingest",
+      "One sink per project to a single BigQuery dataset, no exclusions",
+      "Export everything to GCS and grep with Dataproc",
+      "Disable Logging entirely and rely on application stdout"
+    ],
+    "correct_index": 0,
+    "explanation": "Org-level aggregated sinks centralize audit data; project-level sinks with tenant filters give per-tenant BigQuery routing; partition expiry handles 90-day retention; exclusions on `_Default` drop DEBUG before billable ingest. The other designs miss tenant routing, cost control, or governance.",
+    "doc_links": [
+      {
+        "title": "Aggregated sinks",
+        "url": "https://cloud.google.com/logging/docs/export/aggregated_sinks"
+      },
+      {
+        "title": "Logging exclusions",
+        "url": "https://cloud.google.com/logging/docs/routing/overview#exclusions"
+      },
+      {
+        "title": "BigQuery partition expiration",
+        "url": "https://cloud.google.com/bigquery/docs/managing-partitioned-tables#partition-expiration"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.3-002",
+    "exam": "devops",
+    "section": "DevOps-4.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud tool would you use to find Cloud Run request logs with HTTP status 500 from the `payment` service in the last hour?",
+    "options": [
+      "Cloud Logging — Log Explorer with filter `resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"payment\" AND httpRequest.status=500`",
+      "Cloud Trace",
+      "Cloud Profiler",
+      "BigQuery INFORMATION_SCHEMA"
+    ],
+    "correct_index": 0,
+    "explanation": "Log Explorer with the standard Cloud Run resource/labels filter is the direct path. Trace shows latency spans, Profiler shows CPU/memory profiles, and INFORMATION_SCHEMA queries BigQuery metadata.",
+    "doc_links": [
+      {
+        "title": "Log Explorer",
+        "url": "https://cloud.google.com/logging/docs/view/logs-explorer-interface"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.3-001",
+    "exam": "devops",
+    "section": "DevOps-4.3",
+    "difficulty": "medium",
+    "text": "You want a dashboard panel that shows p95 latency of a service grouped by route, using PromQL. Which combination supports this in Cloud Monitoring?",
+    "options": [
+      "Use one of the built-in service dashboards — Cloud Monitoring panels accept PromQL only when paired with Cloud Trace as the metric source",
+      "Build a custom dashboard with a PromQL widget querying Managed Service for Prometheus metrics scraped from the service's /metrics endpoint",
+      "Export the metrics to Looker Studio first — native Cloud Monitoring dashboards only support MQL and the legacy filter UI, not PromQL",
+      "Use Cloud Profiler to compute p95 latency per route — Cloud Monitoring dashboards don't support latency histograms or PromQL syntax"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Monitoring dashboards support PromQL widgets natively, especially when paired with Managed Service for Prometheus. PromQL is not gated on Cloud Trace, MQL is not the only supported language, and Cloud Profiler is for CPU/heap profiling — not latency dashboards.",
+    "doc_links": [
+      {
+        "title": "PromQL in Cloud Monitoring",
+        "url": "https://cloud.google.com/monitoring/promql"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.3-003",
+    "exam": "devops",
+    "section": "DevOps-4.3",
+    "difficulty": "hard",
+    "text": "A platform team wants a single dashboard that combines: (1) a PromQL p99 latency widget from GMP; (2) a Cloud Logging-based-metric error count; (3) an SLO error budget burn-down; (4) a custom log query as a table. Constraints: must be defined as code (reviewable in Git) and deployed via CI. Which approach BEST fits?",
+    "options": [
+      "Click around the Cloud Console and screenshot it for review",
+      "Define the dashboard as a Cloud Monitoring Dashboard JSON (or via Terraform `google_monitoring_dashboard`) combining PromQL widgets, log-based-metric widgets, SLO widgets, and a logs-panel widget; commit to Git; deploy via CI",
+      "Export to Looker Studio and email PDFs",
+      "Use Grafana with no version control"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Monitoring dashboards support PromQL widgets, log-based-metric widgets, SLO burn widgets, and logs panels — all expressible in JSON / Terraform for GitOps. The other options violate the as-code requirement.",
+    "doc_links": [
+      {
+        "title": "Dashboard JSON reference",
+        "url": "https://cloud.google.com/monitoring/dashboards/api-dashboard"
+      },
+      {
+        "title": "google_monitoring_dashboard (Terraform)",
+        "url": "https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/monitoring_dashboard"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.4-003",
+    "exam": "devops",
+    "section": "DevOps-4.4",
+    "difficulty": "easy",
+    "text": "Which Google Cloud product collects CPU and heap profiles continuously from production with negligible overhead?",
+    "options": [
+      "Cloud Trace",
+      "Cloud Profiler",
+      "Cloud Monitoring uptime checks",
+      "BigQuery"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Profiler is the always-on, low-overhead production profiler. Trace is for distributed request spans; uptime checks probe endpoints; BigQuery is analytics.",
+    "doc_links": [
+      {
+        "title": "Cloud Profiler",
+        "url": "https://cloud.google.com/profiler/docs/about-profiler"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.4-001",
+    "exam": "devops",
+    "section": "DevOps-4.4",
+    "difficulty": "medium",
+    "text": "You need to debug a latency issue that spans Cloud Run, Pub/Sub, and Cloud SQL. Which Google Cloud product correlates spans across all three so you can see end-to-end timing?",
+    "options": [
+      "Cloud Profiler",
+      "Cloud Trace (with OpenTelemetry instrumentation)",
+      "Cloud Logging only",
+      "Error Reporting"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Trace receives OpenTelemetry-formatted spans from your services and stitches them into end-to-end traces.",
+    "doc_links": [
+      {
+        "title": "Cloud Trace overview",
+        "url": "https://cloud.google.com/trace/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "devops-4.4-002",
+    "exam": "devops",
+    "section": "DevOps-4.4",
+    "difficulty": "hard",
+    "text": "A platform team needs unified observability across Go, Java, and Python services on GKE. Constraints: (1) only OpenTelemetry SDKs in apps (no vendor SDKs); (2) traces, metrics, AND logs must correlate by trace ID; (3) backend must be fully managed by Google; (4) no custom exporters in app code. Which design satisfies ALL four?",
+    "options": [
+      "OpenTelemetry SDKs in apps export OTLP to a self-managed Jaeger + Prometheus + ELK stack",
+      "OpenTelemetry SDKs in apps send OTLP to an OpenTelemetry Collector (DaemonSet) which exports traces to Cloud Trace, metrics to Managed Service for Prometheus, and logs to Cloud Logging with trace_id field injection for correlation",
+      "Datadog Agent on every node forwarding to Datadog SaaS",
+      "Cloud Profiler as the single backend for traces, metrics, and logs"
+    ],
+    "correct_index": 1,
+    "explanation": "Apps stay pure-OTel via OTLP to a Collector that fans out to Google-managed backends; injecting trace_id into log entries enables cross-signal correlation. Self-managed stacks fail the 'fully managed' constraint; Datadog violates the OTel-SDK-only and managed-Google constraints; Profiler doesn't replace tracing/logging/metrics.",
+    "doc_links": [
+      {
+        "title": "OpenTelemetry on Google Cloud",
+        "url": "https://cloud.google.com/stackdriver/docs/instrumentation/setup/opentelemetry"
+      },
+      {
+        "title": "Managed Service for Prometheus",
+        "url": "https://cloud.google.com/stackdriver/docs/managed-prometheus"
+      },
+      {
+        "title": "Trace–log correlation",
+        "url": "https://cloud.google.com/trace/docs/trace-log-integration"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.1-003",
+    "exam": "devops",
+    "section": "DevOps-5.1",
+    "difficulty": "easy",
+    "text": "A team wants to surface the most recent commit SHA inside a Cloud Run revision so an operator can confirm what's deployed. Which is the simplest GCP-native pattern?",
+    "options": [
+      "Hard-code the SHA in source",
+      "Pass the commit SHA as a Cloud Run env var at deploy time (e.g., `--set-env-vars=GIT_SHA=$COMMIT_SHA` from Cloud Build) and expose it on a `/version` endpoint",
+      "Manually update a wiki after each deploy",
+      "Store the SHA in Firestore at runtime"
+    ],
+    "correct_index": 1,
+    "explanation": "Env vars set at deploy time travel with the revision and can be exposed by `/version`. Hard-coding requires rebuilds; wikis drift; Firestore is over-engineering.",
+    "doc_links": [
+      {
+        "title": "Cloud Run environment variables",
+        "url": "https://cloud.google.com/run/docs/configuring/environment-variables"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.1-001",
+    "exam": "devops",
+    "section": "DevOps-5.1",
+    "difficulty": "medium",
+    "text": "GKE pods are being OOMKilled in production but not in staging. The team's release process needs an automated guard before promoting to prod. Which control would catch this most directly?",
+    "options": [
+      "Add a Cloud Deploy verify job that runs a representative load test against the staging Service and asserts container memory_working_set_bytes stays under the configured pod memory limit before promotion",
+      "Increase the staging cluster's node pool to use larger machine types so staging memory headroom matches production exactly",
+      "Disable the Vertical Pod Autoscaler in production to keep pod requests stable and prevent OOMKill thrashing from misconfigured recommendations",
+      "Add a HorizontalPodAutoscaler scaling on memory utilization with a target of 70% so prod automatically scales out under memory pressure"
+    ],
+    "correct_index": 0,
+    "explanation": "A Cloud Deploy verify job that load-tests against the staging working-set vs. configured pod limit catches the misconfiguration *before* promotion. Bigger staging nodes mask the problem (the pod limit is the constraint, not node capacity). Disabling VPA does nothing about an under-sized memory limit. HPA on memory adds replicas but each replica still has the same too-small limit — they all OOM.",
+    "doc_links": [
+      {
+        "title": "Cloud Deploy verify phase",
+        "url": "https://cloud.google.com/deploy/docs/verify-deployment"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.1-002",
+    "exam": "devops",
+    "section": "DevOps-5.1",
+    "difficulty": "medium",
+    "text": "On a GKE Standard cluster, pods request 1 CPU each but actual utilization averages 30%. Nodes report 80% CPU allocatable used but only 24% real CPU. Which change reduces cost while preserving reliability?",
+    "options": [
+      "Manually edit each Deployment to drop CPU requests by 60%, then rely on the HorizontalPodAutoscaler to add replicas if real load increases",
+      "Run Vertical Pod Autoscaler in 'Off' (recommendation) mode to learn right-sized requests, then apply them (or use 'Auto' mode where it's safe to evict pods)",
+      "Switch the workloads from CPU requests to BestEffort QoS by removing requests entirely; the scheduler will pack pods more tightly",
+      "Enable cluster-autoscaler in Optimize-Utilization profile and reduce min nodes; the autoscaler will consolidate underused pods automatically"
+    ],
+    "correct_index": 1,
+    "explanation": "VPA recommendations close the gap between requested and used CPU, letting more pods fit per node so the cluster shrinks — reliable because the recommendations are based on observed usage. Manually slashing requests guesses the new value and can starve burst traffic. Removing requests (BestEffort) breaks scheduling guarantees and HPA. Cluster-autoscaler reacts to *node* underuse but cannot consolidate pods that themselves over-request — the requests are the bottleneck.",
+    "doc_links": [
+      {
+        "title": "Vertical Pod Autoscaler",
+        "url": "https://cloud.google.com/kubernetes-engine/docs/concepts/verticalpodautoscaler"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.1-004",
+    "exam": "devops",
+    "section": "DevOps-5.1",
+    "difficulty": "hard",
+    "text": "A GKE Standard cluster must support spiky workloads cost-effectively while meeting these constraints: (1) cold-start under 60 seconds for new pods; (2) no permanently overprovisioned headroom; (3) per-pod memory right-sizing without restarting pods; (4) automatic node-pool optimization across machine types. Which combination BEST fits?",
+    "options": [
+      "Static node pools with manual sizing",
+      "Cluster Autoscaler + Horizontal Pod Autoscaler + Vertical Pod Autoscaler in `Initial`/`Auto` mode + Node Auto-Provisioning to pick machine shapes; image streaming for fast pod start",
+      "Spot VMs only with no autoscaler",
+      "GKE Autopilot, but disable HPA and VPA"
+    ],
+    "correct_index": 1,
+    "explanation": "CA + HPA + VPA + NAP cover horizontal, vertical, and node-shape elasticity; image streaming addresses cold-start. Static sizing wastes money; Spot-only risks the cold-start SLO; disabling HPA/VPA in Autopilot defeats the purpose.",
+    "doc_links": [
+      {
+        "title": "Node auto-provisioning",
+        "url": "https://cloud.google.com/kubernetes-engine/docs/concepts/node-auto-provisioning"
+      },
+      {
+        "title": "Image streaming",
+        "url": "https://cloud.google.com/kubernetes-engine/docs/how-to/image-streaming"
+      },
+      {
+        "title": "Vertical Pod Autoscaler",
+        "url": "https://cloud.google.com/kubernetes-engine/docs/concepts/verticalpodautoscaler"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.2-001",
+    "exam": "devops",
+    "section": "DevOps-5.2",
+    "difficulty": "easy",
+    "text": "Your stateless web tier on Compute Engine has steady 24/7 traffic. The team wants to maximize discount without commitment-management overhead. What applies automatically?",
+    "options": [
+      "Spot VM pricing",
+      "Sustained-Use Discounts, applied automatically based on per-month usage",
+      "1-year committed-use discount, requires manual purchase",
+      "Free tier"
+    ],
+    "correct_index": 1,
+    "explanation": "Sustained-Use Discounts (SUDs) apply automatically to GCE/GKE for resources running a large fraction of the month, with no commitment.",
+    "doc_links": [
+      {
+        "title": "Sustained-Use Discounts",
+        "url": "https://cloud.google.com/compute/docs/sustained-use-discounts"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.2-002",
+    "exam": "devops",
+    "section": "DevOps-5.2",
+    "difficulty": "medium",
+    "text": "A GKE Standard cluster has these workload patterns: 40% steady 24/7, 30% weekday business-hours, 30% unpredictable bursts. Which discount strategy minimizes cost without stranding commitments?",
+    "options": [
+      "Buy resource-based 1-year CUDs sized to 100% of peak capacity in each region the cluster runs in",
+      "Size 1-year CUDs to the 40% always-on baseline; let business-hours load run on-demand (sustained-use discounts apply automatically); use Spot VMs for fault-tolerant burst workloads",
+      "Buy resource-based 3-year CUDs sized to the 70% baseline-plus-business-hours combined, accepting some over-commitment for the deeper discount",
+      "Use Spot VMs for the entire cluster; checkpoint workloads frequently and accept that the steady-state tier may restart on preemption"
+    ],
+    "correct_index": 1,
+    "explanation": "Sizing CUDs to the always-on baseline maximizes commitment value without stranding it; SUDs apply automatically to weekday on-demand usage; Spot is ideal for fault-tolerant bursts. Committing to peak (option A) strands ~60% of the commitment outside business hours. Three-year CUDs at 70% (option C) lock in capacity that the unpredictable burst tier won't consistently use. All-Spot (option D) breaks the steady 24/7 reliability requirement.",
+    "doc_links": [
+      {
+        "title": "Committed use discounts",
+        "url": "https://cloud.google.com/docs/cuds"
+      },
+      {
+        "title": "Sustained-use discounts",
+        "url": "https://cloud.google.com/compute/docs/sustained-use-discounts"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.2-003",
+    "exam": "devops",
+    "section": "DevOps-5.2",
+    "difficulty": "hard",
+    "text": "An org wants to maximize discounts across a large GCE fleet but avoid stranding commitments as workloads shift between projects. Constraints: (1) shareable across projects under a billing account; (2) flexibility across machine families; (3) lowest discount-management overhead. Which choice BEST fits?",
+    "options": [
+      "Resource-based committed use discounts purchased per-project per-machine-type",
+      "Flexible (spend-based) committed use discounts at the billing-account level, automatically applied across projects and eligible families",
+      "Spot VMs only",
+      "Sustained-use discounts only"
+    ],
+    "correct_index": 1,
+    "explanation": "Flexible CUDs commit to a dollar amount of compute spend and apply across projects under the billing account and across eligible families — least likely to be stranded as workloads move. Resource-based CUDs are project- and shape-locked; Spot/SUD don't satisfy the commitment-discount goal at scale.",
+    "doc_links": [
+      {
+        "title": "Flexible committed use discounts",
+        "url": "https://cloud.google.com/compute/docs/instances/signing-up-committed-use-discounts#flexible-cud"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.3-001",
+    "exam": "devops",
+    "section": "DevOps-5.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud feature lets you set spending thresholds with email alerts (and optional Pub/Sub notifications) per project or billing account, without capping spend automatically?",
+    "options": [
+      "Quotas",
+      "Budgets and budget alerts in Cloud Billing",
+      "Cloud Armor rate limits",
+      "Recommender API"
+    ],
+    "correct_index": 1,
+    "explanation": "Budgets emit alerts at configurable percentages of a target; pairing with Pub/Sub allows automated reactions. Quotas cap usage but don't track spend.",
+    "doc_links": [
+      {
+        "title": "Set budgets and alerts",
+        "url": "https://cloud.google.com/billing/docs/how-to/budgets"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.3-002",
+    "exam": "devops",
+    "section": "DevOps-5.3",
+    "difficulty": "medium",
+    "text": "Your monthly GCP bill jumped 40%. You need to identify which projects, services, and SKUs drove the increase, with breakdowns by labels (cost-allocation tags). Which tool is the right starting point?",
+    "options": [
+      "Cloud Asset Inventory",
+      "Cloud Billing reports + BigQuery billing export, sliced by project, service, SKU, and labels",
+      "Security Command Center",
+      "Cloud Trace"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Billing reports give built-in slicing by project/service/SKU/label; the BigQuery billing export lets you query the full detailed cost dataset for ad-hoc breakdowns. Asset Inventory tracks resource state, not cost; SCC is security; Trace is latency.",
+    "doc_links": [
+      {
+        "title": "Cloud Billing reports",
+        "url": "https://cloud.google.com/billing/docs/how-to/reports"
+      },
+      {
+        "title": "BigQuery billing export",
+        "url": "https://cloud.google.com/billing/docs/how-to/export-data-bigquery"
+      }
+    ]
+  },
+  {
+    "id": "devops-5.3-003",
+    "exam": "devops",
+    "section": "DevOps-5.3",
+    "difficulty": "hard",
+    "text": "A platform team is building a FinOps capability. Requirements: (1) per-team chargeback by GCP labels; (2) anomaly detection on daily spend; (3) forecast budget alerts at 50/80/100% with Pub/Sub for automation; (4) ad-hoc SQL slicing of detailed cost line items; (5) recommendations for rightsizing. Which combination BEST fits?",
+    "options": [
+      "Cloud Billing reports only",
+      "Cloud Billing budgets (with Pub/Sub on threshold) + BigQuery detailed billing export (for SQL + label-based chargeback) + Cloud Monitoring anomaly detection on daily-spend log-based metric + Active Assist Recommender (cost recommendations)",
+      "Manual spreadsheet maintained weekly",
+      "Cloud Asset Inventory exports only"
+    ],
+    "correct_index": 1,
+    "explanation": "Each requirement maps to a feature: budgets+Pub/Sub for alerts/automation, BigQuery export for chargeback/SQL, Monitoring anomaly detection on a derived metric, and Recommender for rightsizing. Reports/spreadsheets/CAI alone miss most requirements.",
+    "doc_links": [
+      {
+        "title": "Budgets and budget alerts",
+        "url": "https://cloud.google.com/billing/docs/how-to/budgets"
+      },
+      {
+        "title": "BigQuery detailed billing export",
+        "url": "https://cloud.google.com/billing/docs/how-to/export-data-bigquery-tables"
+      },
+      {
+        "title": "Active Assist Recommender",
+        "url": "https://cloud.google.com/recommender/docs/overview"
+      }
+    ]
+  }
+]
