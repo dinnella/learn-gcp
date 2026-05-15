@@ -9,6 +9,10 @@ function show(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function trackEvent(name, params = {}) {
+  if (typeof gtag === "function") gtag("event", name, params);
+}
+
 const state = {
   exam: "pca",                  // current exam selected on the start screen
   mode: "classic",              // 'classic' | 'progressive' | 'arcade'
@@ -58,6 +62,7 @@ async function init() {
       document.querySelectorAll("#exam-seg button").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       state.exam = btn.dataset.exam;
+      trackEvent("exam_changed", { exam: btn.dataset.exam });
       await loadExamMeta(state.exam);
     });
   }
@@ -76,6 +81,7 @@ async function init() {
       document.querySelectorAll("#mode-tabs button").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       state.mode = btn.dataset.mode;
+      trackEvent("mode_selected", { mode: btn.dataset.mode });
       updateHeroSub();
     });
   }
@@ -97,8 +103,15 @@ async function init() {
 
   for (const btn of document.querySelectorAll(".navbtn")) {
     btn.addEventListener("click", () => {
+      if (btn.classList.contains("github-nav")) {
+        trackEvent("github_clicked");
+        return;
+      }
       const target = btn.dataset.screen;
-      if (target === "leaderboard-screen") loadActiveLeaderboard();
+      if (target === "leaderboard-screen") {
+        loadActiveLeaderboard();
+        trackEvent("leaderboard_viewed");
+      }
       show(target);
     });
   }
@@ -252,6 +265,7 @@ async function startSession(body) {
   updateHud();
   renderQuestion(data.first_question);
   show("quiz-screen");
+  trackEvent("game_start", { mode: "classic", exam: body.exam, num_questions: body.num_questions });
   startBtns.forEach((b) => b && (b.disabled = false));
 }
 
@@ -534,6 +548,15 @@ async function renderResults() {
   $("submit-score-btn").disabled = false;
 
   show("results-screen");
+  trackEvent("game_complete", {
+    mode: "classic",
+    exam: r.exam,
+    score_pct: r.score_pct,
+    grade: rc.overall_grade,
+    correct: r.answered,
+    total: r.total,
+    passed: !!rc.passed_mock,
+  });
   if (rc.passed_mock) burstConfetti();
 }
 
@@ -560,6 +583,7 @@ async function onSubmitScore() {
   state.playerName = name;
   localStorage.setItem("playerName", name);
   $("score-submit-msg").textContent = "Saved ✓ — check the leaderboard.";
+  trackEvent("score_submitted", { mode: "classic" });
 }
 
 // ---------- leaderboard ----------
@@ -658,6 +682,7 @@ async function startProgressiveSession() {
   updateHud();
   renderQuestion(data.first_question);
   show("quiz-screen");
+  trackEvent("game_start", { mode: "progressive" });
   $("quick-start-btn").disabled = false;
 }
 
@@ -779,6 +804,7 @@ async function startArcadeSession() {
   renderQuestion(data.first_question);
   show("quiz-screen");
   startArcadeTicker();
+  trackEvent("game_start", { mode: "arcade" });
   $("quick-start-btn").disabled = false;
 }
 
@@ -938,6 +964,7 @@ const LEVEL_RESETS = { 2: 55, 3: 50, 4: 45, 5: 45 };
 
 function openLevelUpModal() {
   const newLevel = state.level + 1;
+  trackEvent("arcade_level_up", { level: newLevel });
   $("lvl-new").textContent = newLevel;
   const reset = LEVEL_RESETS[newLevel] ?? 45;
   $("lvl-reset").textContent = `${reset}s`;
@@ -957,6 +984,7 @@ async function onAbandonRun() {
   if (!state.sessionId || state.mode === "classic") return;
   const path = state.mode === "arcade" ? "arcade" : "progressive";
   stopArcadeTicker();
+  trackEvent("game_abandoned", { mode: state.mode, answered: state.answered, score: state.scoreTotal });
   await fetch(`/api/${path}/sessions/${state.sessionId}/abandon`, { method: "POST" }).catch(() => {});
   if (path === "arcade") return loadArcadeSummaryAndShow();
   const r = await loadProgressiveSummary();
@@ -1042,6 +1070,16 @@ function renderAltResults(r) {
   }
 
   show("alt-results-screen");
+  if (r.ended_reason && r.ended_reason !== "abandoned") {
+    const _isArc = state.mode === "arcade";
+    trackEvent("game_complete", {
+      mode: state.mode,
+      score: r.score_total ?? 0,
+      ...(_isArc
+        ? { level_reached: r.level_reached, accuracy_pct: r.accuracy_pct }
+        : { correct: r.correct, strikes: r.strikes }),
+    });
+  }
 }
 
 function headlineForRun(r, isArc) {
@@ -1085,6 +1123,7 @@ async function onAltSubmitScore() {
   state.playerName = name;
   localStorage.setItem("playerName", name);
   $("alt-score-submit-msg").textContent = "Saved ✓ — check the leaderboard.";
+  trackEvent("score_submitted", { mode: state.mode });
 }
 
 // =====================================================================
