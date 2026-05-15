@@ -40,23 +40,10 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          # depth 2 so we can diff HEAD vs HEAD^ to detect backend changes
-          fetch-depth: 2
-
-      # Detect whether any backend source changed in this push.
-      # If only infra / e2e / docs changed we reuse the currently-running image
-      # instead of building a new one — avoiding an unnecessary scan charge.
-      - name: Detect backend changes
-        id: changes
-        run: |
-          CHANGED=$(git diff --name-only HEAD^ HEAD -- practice-app/backend/ 2>/dev/null || echo "UNKNOWN")
-          if [[ "$CHANGED" == "UNKNOWN" ]] || [[ -n "$CHANGED" ]]; then
-            echo "build=true"  >> "$GITHUB_OUTPUT"
-            echo "Backend changed (or first commit) — will build a new image."
-          else
-            echo "build=false" >> "$GITHUB_OUTPUT"
-            echo "Backend unchanged — will reuse the current image."
-          fi
+          # full history so we can diff HEAD against the SHA currently deployed
+          # to Cloud Run (which may be many commits behind if intermediate
+          # deploys were skipped/failed).
+          fetch-depth: 0
 
       - uses: google-github-actions/auth@v3
         with:
@@ -65,6 +52,55 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOYER_SA }}
 
       - uses: google-github-actions/setup-gcloud@v3
+
+      # Detect whether the backend source has changed since whatever image is
+      # currently serving traffic on Cloud Run. Comparing against HEAD^ is
+      # WRONG: if a previous push touched the backend but its CI failed (or
+      # its deploy was skipped), and a later push only touches non-backend
+      # files, HEAD^ shows no backend change and we'd reuse the stale image —
+      # leaving prod running pre-rename code while Firestore has post-rename
+      # data. Comparing against the deployed image tag (= git SHA) is robust
+      # to any number of skipped intermediate deploys.
+      - name: Detect backend changes (vs deployed image)
+        id: changes
+        # Allow `workflow_dispatch` to force a rebuild via input, and treat
+        # any failure to introspect the running revision as "build".
+        run: |
+          set +e
+          DEPLOYED_IMAGE=$(gcloud run services describe "${{ env.IMAGE }}" \
+            --region="${{ env.REGION }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --format='value(spec.template.spec.containers[0].image)' 2>/dev/null)
+          set -e
+          DEPLOYED_SHA="${DEPLOYED_IMAGE##*:}"
+          echo "Currently deployed image: ${DEPLOYED_IMAGE:-<none>}"
+          echo "Currently deployed SHA:   ${DEPLOYED_SHA:-<none>}"
+
+          # First-ever deploy, or the bootstrap placeholder is still serving:
+          # always build.
+          if [[ -z "$DEPLOYED_SHA" || "$DEPLOYED_SHA" == "bootstrap" ]]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "No prior real revision — will build a new image."
+            exit 0
+          fi
+
+          # The deployed SHA may not exist locally if it was force-pushed away;
+          # treat that as "build" to be safe.
+          if ! git cat-file -e "$DEPLOYED_SHA^{commit}" 2>/dev/null; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "Deployed SHA $DEPLOYED_SHA not found in history — will build."
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$DEPLOYED_SHA" HEAD -- practice-app/backend/ || true)
+          if [[ -n "$CHANGED" ]]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "Backend changed since deployed SHA — will build:"
+            echo "$CHANGED"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "Backend unchanged since deployed SHA — will reuse current image."
+          fi
 
       - uses: opentofu/setup-opentofu@v2
         with:
