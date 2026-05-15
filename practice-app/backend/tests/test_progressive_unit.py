@@ -39,7 +39,7 @@ def test_percentile_after_some_scores(fake_db):
     assert _percentile(20) == 66.7
 
 
-def _seed_qs(db, exams=("pca",), difficulties=("easy", "medium", "hard"), per=2):
+def _seed_qs(db, exams=("architect",), difficulties=("easy", "medium", "hard"), per=2):
     """Seed N questions per (exam, difficulty)."""
     n = 0
     for exam in exams:
@@ -59,7 +59,7 @@ def _seed_qs(db, exams=("pca",), difficulties=("easy", "medium", "hard"), per=2)
 def test_pick_one_question_filters_by_difficulty(fake_db):
     _seed_qs(fake_db)
     from app.questions import pick_one_question
-    q = pick_one_question(["pca"], "hard", [])
+    q = pick_one_question(["architect"], "hard", [])
     assert q is not None
     assert q.difficulty == "hard"
 
@@ -67,18 +67,18 @@ def test_pick_one_question_filters_by_difficulty(fake_db):
 def test_pick_one_question_returns_none_when_exhausted(fake_db):
     _seed_qs(fake_db, difficulties=("easy",), per=1)
     from app.questions import pick_one_question
-    q = pick_one_question(["pca"], "hard", [])
+    q = pick_one_question(["architect"], "hard", [])
     assert q is None
 
 
 def test_count_questions_excludes_served(fake_db):
     _seed_qs(fake_db, difficulties=("hard",), per=3)
     from app.questions import count_questions
-    assert count_questions(["pca"], "hard", []) == 3
-    assert count_questions(["pca"], "hard", ["pca-hard-000", "pca-hard-001"]) == 1
+    assert count_questions(["architect"], "hard", []) == 3
+    assert count_questions(["architect"], "hard", ["architect-hard-000", "architect-hard-001"]) == 1
 
 
 def test_list_exams_is_dynamic(fake_db):
-    _seed_qs(fake_db, exams=("pca", "devops", "aws-saa"))
+    _seed_qs(fake_db, exams=("architect", "devops", "aws-saa"))
     from app.questions import list_exams
-    assert list_exams() == ["aws-saa", "devops", "pca"]
+    assert list_exams() == ["architect", "aws-saa", "devops"]

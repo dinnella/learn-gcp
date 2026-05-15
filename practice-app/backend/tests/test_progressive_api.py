@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-def _seed(db, exams=("pca", "devops", "genai"),
+def _seed(db, exams=("architect", "devops", "genai"),
           difficulties=("easy", "medium", "hard"), per=4):
     for exam in exams:
         for diff in difficulties:
@@ -155,7 +155,7 @@ def test_leaderboard_separate_from_classic(client):
             break
         qid = d["next_question"]["id"]
     client.post(f"/api/progressive/sessions/{sid}/score", json={"player_name": "ProgOnly"})
-    classic_lb = client.get("/api/leaderboard/pca").json()
+    classic_lb = client.get("/api/leaderboard/architect").json()
     names = [e["player_name"] for e in classic_lb["entries"]]
     assert "ProgOnly" not in names
 

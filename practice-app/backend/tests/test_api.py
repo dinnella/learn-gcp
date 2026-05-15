@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 Q1 = {
     "id": "pca-1.1-001",
-    "exam": "pca",
+    "exam": "architect",
     "section": "PCA-1.1",
     "difficulty": "medium",
     "text": "Which service provides managed relational DB?",
@@ -26,7 +26,7 @@ Q1 = {
 
 Q2 = {
     "id": "pca-1.2-001",
-    "exam": "pca",
+    "exam": "architect",
     "section": "PCA-1.2",
     "difficulty": "hard",
     "text": "Best compute for short-lived event-driven workloads?",
@@ -62,15 +62,15 @@ def test_health(client):
 # /api/exams
 # ---------------------------------------------------------------------------
 
-def test_exams_lists_pca(client):
+def test_exams_lists_architect(client):
     r = client.get("/api/exams")
     assert r.status_code == 200
     exams = {e["id"]: e for e in r.json()["exams"]}
-    assert "pca" in exams
+    assert "architect" in exams
     # Section titles should be human-readable, not raw codes
-    pca_titles = [s["title"] for s in exams["pca"]["sections"]]
-    assert any("Compliance" in t for t in pca_titles)
-    assert any("compute" in t.lower() for t in pca_titles)
+    arch_titles = [s["title"] for s in exams["architect"]["sections"]]
+    assert any("Compliance" in t for t in arch_titles)
+    assert any("compute" in t.lower() for t in arch_titles)
 
 
 def test_exams_devops_sections_have_titles(client):
@@ -98,7 +98,7 @@ def test_exams_devops_sections_have_titles(client):
 # POST /api/sessions  →  answer  →  summary
 # ---------------------------------------------------------------------------
 
-def _start_session(client, n=2, exam="pca"):
+def _start_session(client, n=2, exam="architect"):
     return client.post("/api/sessions", json={
         "exam": exam, "num_questions": n,
         "sections": None, "difficulties": None,
@@ -112,7 +112,7 @@ def test_start_session_returns_first_question(client):
     assert "session_id" in body
     assert body["total"] == 2
     fq = body["first_question"]
-    assert fq["exam"] == "pca"
+    assert fq["exam"] == "architect"
     assert len(fq["options"]) == 4
     # correct_index must never appear in the client response
     assert "correct_index" not in fq
@@ -120,7 +120,7 @@ def test_start_session_returns_first_question(client):
 
 def test_start_session_no_questions_raises_400(client):
     r = client.post("/api/sessions", json={
-        "exam": "pca", "num_questions": 5,
+        "exam": "architect", "num_questions": 5,
         "sections": ["PCA-NONEXISTENT"], "difficulties": None,
     })
     assert r.status_code == 400
@@ -214,7 +214,7 @@ def test_report_card_next_session_config_is_postable(client):
 # ---------------------------------------------------------------------------
 
 def test_leaderboard_empty(client):
-    r = client.get("/api/leaderboard/pca")
+    r = client.get("/api/leaderboard/architect")
     assert r.status_code == 200
     assert r.json()["entries"] == []
 
@@ -242,10 +242,10 @@ def test_submit_score_and_appears_on_leaderboard(client):
     assert r_score.status_code == 200
     entry = r_score.json()
     assert entry["player_name"] == "Testy McTestface"
-    assert entry["exam"] == "pca"
+    assert entry["exam"] == "architect"
     assert isinstance(entry["score_pct"], float)
 
-    lb = client.get("/api/leaderboard/pca").json()
+    lb = client.get("/api/leaderboard/architect").json()
     names = [e["player_name"] for e in lb["entries"]]
     assert "Testy McTestface" in names
 
@@ -267,7 +267,7 @@ def test_submit_score_idempotent(client):
     client.post(f"/api/sessions/{sid}/score", json={"player_name": "Dup"})
     client.post(f"/api/sessions/{sid}/score", json={"player_name": "Dup"})
 
-    lb = client.get("/api/leaderboard/pca").json()
+    lb = client.get("/api/leaderboard/architect").json()
     dup_entries = [e for e in lb["entries"] if e["player_name"] == "Dup"]
     assert len(dup_entries) == 1, "Duplicate score entries should be deduplicated"
 

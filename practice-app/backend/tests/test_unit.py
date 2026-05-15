@@ -68,7 +68,7 @@ def test_title_for(code, expected_fragment):
 
 def test_question_for_client_has_no_correct_index():
     q = QuestionForClient(
-        id="q1", exam="pca", section="PCA-1.1", section_title="Compliance",
+        id="q1", exam="architect", section="PCA-1.1", section_title="Compliance",
         difficulty="medium", text="?", options=["A", "B", "C", "D"],
     )
     assert not hasattr(q, "correct_index")
@@ -78,7 +78,7 @@ def test_question_for_client_has_no_correct_index():
 def test_question_for_client_strips_extra_fields():
     """Pydantic should not pass extra fields through to the client model."""
     data = dict(
-        id="q1", exam="pca", section="PCA-1.1", section_title="Compliance",
+        id="q1", exam="architect", section="PCA-1.1", section_title="Compliance",
         difficulty="medium", text="?", options=["A", "B", "C", "D"],
         correct_index=2, explanation="secret",
     )

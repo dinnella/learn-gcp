@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-def _seed(db, exams=("pca", "devops", "genai"),
+def _seed(db, exams=("architect", "devops", "genai"),
           difficulties=("easy", "medium", "hard"), per=10):
     for exam in exams:
         for diff in difficulties:

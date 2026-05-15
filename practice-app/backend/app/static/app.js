@@ -14,7 +14,7 @@ function trackEvent(name, params = {}) {
 }
 
 const state = {
-  exam: "pca",                  // current exam selected on the start screen
+  exam: "architect",                  // current exam selected on the start screen
   mode: "classic",              // 'classic' | 'progressive' | 'arcade'
   sessionId: null,
   total: 0,
@@ -209,7 +209,7 @@ function updateHeroSub() {
   if (state.mode === "progressive") {
     sub.innerHTML = "<strong>Progressive:</strong> 3 strikes, mixed exams, ladder difficulty. 1 / 2 / 4 pts.";
   } else if (state.mode === "arcade") {
-    sub.innerHTML = "<strong>Arcade:</strong> 2 minutes. Correct answers add points + time. Level up every 10.";
+    sub.innerHTML = "<strong>Arcade:</strong> 60-second sprint. Correct answers add points + time. Wrong answers cost 10s. Level up every 10.";
   } else {
     sub.innerHTML = "Defaults to <strong>Cloud Architect</strong> · 10 questions · medium difficulty.";
   }
@@ -1132,7 +1132,7 @@ async function onAltSubmitScore() {
 
 async function loadActiveLeaderboard() {
   if (state.lbMode === "classic") {
-    const exam = document.querySelector("#lb-exam-tabs .tab.active")?.dataset.exam || "pca";
+    const exam = document.querySelector("#lb-exam-tabs .tab.active")?.dataset.exam || "architect";
     return loadLeaderboard(exam);
   }
   if (state.lbMode === "progressive") return loadProgressiveLeaderboard();

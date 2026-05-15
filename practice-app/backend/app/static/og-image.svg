@@ -35,7 +35,7 @@
 
   <!-- Tagline -->
   <text x="600" y="460" font-family="system-ui,-apple-system,Helvetica,Arial,sans-serif"
-        font-size="34" font-weight="400" text-anchor="middle" fill="#8a93a4">GCP Cert Practice · PCA &amp; DevOps Engineer</text>
+        font-size="34" font-weight="400" text-anchor="middle" fill="#8a93a4">GCP Certification Practice</text>
 
   <!-- Sub-tagline -->
   <text x="600" y="520" font-family="system-ui,-apple-system,Helvetica,Arial,sans-serif"

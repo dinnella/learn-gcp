@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-Exam = Literal["pca", "devops", "genai"]
+Exam = Literal["architect", "devops", "genai"]
 Difficulty = Literal["easy", "medium", "hard"]
 Confidence = Literal["confident", "narrowed", "guess"]
 SessionMode = Literal["classic", "progressive", "arcade"]

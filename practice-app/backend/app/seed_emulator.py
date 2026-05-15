@@ -1,6 +1,6 @@
 """One-shot seeder: load all seed/*.json files into Firestore.
 
-Each exam lives in its own file (pca.json, devops.json, genai.json …).
+Each exam lives in its own file (architect.json, devops.json, genai.json …).
 Files whose name starts with an underscore are skipped (migration helpers).
 
 Idempotent: docs are written with their natural ID so re-runs overwrite
