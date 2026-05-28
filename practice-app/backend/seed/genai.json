@@ -54,15 +54,15 @@
     "exam": "genai",
     "section": "GENAI-1.1",
     "difficulty": "hard",
-    "text": "A regulated insurer must select a foundation model for an internal claims-summarization product. Requirements: (1) handles ~200-page PDFs in a single pass; (2) supports a signed BAA-equivalent data-handling agreement and never trains on customer data; (3) deployable in a specific region for data residency; (4) low latency for interactive review; (5) cost predictable at scale. Which set of selection criteria BEST aligns with Google's guidance for choosing a foundation model?",
+    "text": "A regulated insurer is selecting a foundation model for an internal claims-summarization tool. Requirements include single-pass handling of 200-page PDFs, contractual no-training on customer data, regional data residency, interactive latency, and predictable cost. Which selection approach BEST aligns with Google's guidance for choosing a foundation model?",
     "options": [
-      "Pick the model with the most Twitter buzz",
-      "Evaluate modality, context window, security/privacy posture, regional availability and reliability, performance/latency, cost, and customization (fine-tuning) needs against the use case requirements",
-      "Always pick the largest model regardless of cost or latency",
-      "Always pick the cheapest model regardless of context window"
+      "Standardize on the largest available Gemini Ultra variant for every task to maximize answer quality, accepting higher per-token cost and latency",
+      "Evaluate candidates against modality, context window, security/privacy posture, regional availability, latency, cost, and customization options, mapped to the use-case requirements",
+      "Pick the lowest per-token model in Vertex AI Studio and rely on aggressive prompt engineering to compensate for any context-window or quality gaps",
+      "Default to a self-hosted open-weights model on GKE so the team controls the runtime, then apply the same model to every internal use case for consistency"
     ],
     "correct_index": 1,
-    "explanation": "The exam guide explicitly lists modality, context window, security, availability/reliability, cost, performance, and fine-tuning/customization as the model-selection considerations — they map 1:1 to the five requirements. Buzz, size-only, or cost-only heuristics ignore the constraints.",
+    "explanation": "Google's model-selection guidance enumerates modality, context window, security/privacy, regional availability, latency, cost, and customization needs — the criteria that map 1:1 to the insurer's constraints. Standardizing on the largest model ignores latency and cost; cheapest-first ignores context window and quality; defaulting to self-hosted ignores per-use-case fit and adds operational burden.",
     "doc_links": [
       {
         "title": "Choose a model (Vertex AI)",
@@ -91,7 +91,7 @@
     "doc_links": [
       {
         "title": "Structured vs unstructured data",
-        "url": "https://cloud.google.com/learn/what-is-unstructured-data"
+        "url": "https://cloud.google.com/discover/what-is-unstructured-data"
       }
     ]
   },
@@ -102,10 +102,10 @@
     "difficulty": "medium",
     "text": "A team wants to fine-tune a model with supervised examples but their internal documents have no answers attached. According to the exam guide's data taxonomy, what do they need before supervised fine-tuning is feasible?",
     "options": [
-      "More unlabeled data only",
+      "Collect more unlabeled internal documents and use them to continue self-supervised pre-training of the base foundation model first",
       "Labeled data — input/output pairs that demonstrate the desired behavior",
-      "A larger context window only",
-      "A different programming language"
+      "A larger model context window so the entire unlabeled corpus can be passed in as in-context few-shot examples at inference time",
+      "Re-implement the data pipeline in a different programming language to make sure the unlabeled documents are tokenized correctly"
     ],
     "correct_index": 1,
     "explanation": "Supervised fine-tuning requires labeled examples (input + desired output). Unlabeled data alone supports unsupervised or self-supervised approaches, not supervised tuning.",
@@ -177,10 +177,10 @@
     "difficulty": "medium",
     "text": "An ML team wants to deploy a small, openly-licensed model on their own infrastructure (including on-prem GPUs) for a privacy-sensitive workload, while still benefiting from Google research. Which Google model family is the BEST fit?",
     "options": [
-      "Gemini 1.5 Pro via Vertex AI only",
+      "Gemini 1.5 Pro consumed only as a managed Vertex AI API endpoint with no option to download weights for on-prem use",
       "Gemma — Google's family of open models intended for self-hosted and on-prem deployment",
-      "Imagen, used for image classification",
-      "Veo for text generation"
+      "Imagen 3, Google's text-to-image generation model served through Vertex AI for marketing and design workflows",
+      "Veo, Google's high-fidelity text-to-video generation model offered via Vertex AI for short-form video creation"
     ],
     "correct_index": 1,
     "explanation": "Gemma is Google's open-weights model family, designed to be downloaded and run anywhere — the right answer for self-hosted/on-prem. Gemini is offered as a managed API; Imagen is image generation; Veo is video.",
@@ -212,7 +212,7 @@
     "doc_links": [
       {
         "title": "AI Hypercomputer",
-        "url": "https://cloud.google.com/ai-hypercomputer"
+        "url": "https://cloud.google.com/products/ai-infrastructure"
       },
       {
         "title": "Cloud TPU overview",
@@ -454,7 +454,7 @@
       },
       {
         "title": "ReAct paper (referenced by Google)",
-        "url": "https://research.google/pubs/react-synergizing-reasoning-and-acting-in-language-models/"
+        "url": "https://arxiv.org/abs/2210.03629"
       }
     ]
   },
@@ -605,6 +605,2412 @@
       {
         "title": "Responsible AI on Google Cloud",
         "url": "https://cloud.google.com/responsible-ai"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.2-003",
+    "exam": "genai",
+    "section": "GENAI-1.2",
+    "difficulty": "easy",
+    "text": "Which term describes data that is organized in fixed fields like rows and columns (e.g., a relational table)?",
+    "options": [
+      "Structured data",
+      "Unstructured data",
+      "Semi-structured data",
+      "Streaming data"
+    ],
+    "correct_index": 0,
+    "explanation": "Structured data has a defined schema (rows/columns). Unstructured (text/images/audio) has no schema; semi-structured (JSON) has flexible schema; streaming refers to delivery, not structure.",
+    "doc_links": [
+      {
+        "title": "Data types overview",
+        "url": "https://cloud.google.com/discover/what-is-structured-data"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.2-004",
+    "exam": "genai",
+    "section": "GENAI-1.2",
+    "difficulty": "easy",
+    "text": "Which is an example of unstructured data commonly used to train or ground gen AI?",
+    "options": [
+      "A spreadsheet of monthly sales totals broken down by region with formulas summing each column at the bottom of the sheet",
+      "A collection of customer-support call transcripts and PDF product manuals",
+      "An ANSI SQL table of users with typed columns for id, email, signup_date, and last_login indexed for fast joins",
+      "A normalized star-schema warehouse with fact and dimension tables loaded nightly from operational source systems"
+    ],
+    "correct_index": 1,
+    "explanation": "Transcripts and PDFs are unstructured \u2014 the typical fuel for gen AI grounding/RAG. Spreadsheets, SQL tables, and star-schema models are structured.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Search for grounding on unstructured data",
+        "url": "https://cloud.google.com/enterprise-search"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.2-005",
+    "exam": "genai",
+    "section": "GENAI-1.2",
+    "difficulty": "medium",
+    "text": "A team plans to fine-tune a foundation model on internal call transcripts. Which data quality consideration is MOST important to address first?",
+    "options": [
+      "Encrypt the data at rest only",
+      "Inspect for and remove PII / sensitive data and de-duplicate before training",
+      "Convert all transcripts to all-uppercase",
+      "Skip data preparation and rely on the model's defaults"
+    ],
+    "correct_index": 1,
+    "explanation": "Removing PII and duplicates is foundational data prep that drives both compliance and model quality. Encryption at rest is necessary but doesn't address PII; case normalization is cosmetic; skipping prep degrades quality.",
+    "doc_links": [
+      {
+        "title": "Sensitive Data Protection",
+        "url": "https://cloud.google.com/sensitive-data-protection/docs"
+      },
+      {
+        "title": "Data preparation for fine-tuning",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/models/tune-models"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.2-006",
+    "exam": "genai",
+    "section": "GENAI-1.2",
+    "difficulty": "medium",
+    "text": "A retailer wants to ground a gen AI assistant on its product catalog. Which data preparation step has the LARGEST impact on retrieval quality in a typical RAG pipeline?",
+    "options": [
+      "Storing the entire catalog as a single 200 MB JSON file in Cloud Storage and embedding the file as one giant vector entry",
+      "Chunking documents thoughtfully (size + overlap) and producing high-quality embeddings",
+      "Pre-rendering each catalog text page to a PNG image so the retriever can match against visual features instead of text",
+      "Stripping all SKU, category, and price metadata from each chunk so embeddings encode only the free-form description text"
+    ],
+    "correct_index": 1,
+    "explanation": "Chunking strategy and embedding quality dominate RAG retrieval performance. Single large files don't retrieve well, image conversion loses semantic search, and metadata removal hurts filtering.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Vector Search",
+        "url": "https://cloud.google.com/vertex-ai/docs/vector-search/overview"
+      },
+      {
+        "title": "RAG architectures on Google Cloud",
+        "url": "https://cloud.google.com/architecture/rag-capable-gen-ai-app-using-vertex-ai"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.2-007",
+    "exam": "genai",
+    "section": "GENAI-1.2",
+    "difficulty": "hard",
+    "text": "An enterprise wants to fine-tune Gemini on proprietary documents but is concerned about leakage of sensitive data through the model's outputs. Which combination BEST mitigates that risk?",
+    "options": [
+      "Skip pre-tuning data review and trust that Gemini is unlikely to memorize and regurgitate sensitive content",
+      "De-identify with Sensitive Data Protection, keep truly sensitive data in retrieval (RAG) instead of training, and red-team the tuned model for memorization",
+      "Train on a publicly scraped copy of the dataset so the proprietary corpus never reaches Vertex AI tuning jobs",
+      "Disable safety filters during tuning and inference so the model can produce higher-fidelity answers from the source documents"
+    ],
+    "correct_index": 1,
+    "explanation": "DLP de-identification + keeping sensitive data in retrieval rather than fine-tuning + red-team evaluation is the layered mitigation. Skipping review, public-copy training, or disabling safety all increase risk.",
+    "doc_links": [
+      {
+        "title": "Sensitive Data Protection",
+        "url": "https://cloud.google.com/sensitive-data-protection/docs"
+      },
+      {
+        "title": "Vertex AI tuning best practices",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/models/tune-models"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.2-008",
+    "exam": "genai",
+    "section": "GENAI-1.2",
+    "difficulty": "hard",
+    "text": "A team is building a multimodal assistant that uses text, images, and audio. Which data preparation principle is MOST important across modalities?",
+    "options": [
+      "Treat each modality identically with a single normalization pipeline that ignores format-specific semantics",
+      "Apply modality-specific preprocessing (text chunking, image normalization, audio transcription/diarization), maintain provenance, and align labels/timestamps across modalities",
+      "Use only the text modality and discard image and audio inputs to simplify the data preparation pipeline",
+      "Discard provenance metadata to reduce storage costs and accelerate the embedding step in the data pipeline"
+    ],
+    "correct_index": 1,
+    "explanation": "Each modality needs targeted preprocessing, and cross-modal alignment plus provenance are essential for multimodal quality and auditability. Identical handling, dropping modalities, or losing provenance all degrade quality and traceability.",
+    "doc_links": [
+      {
+        "title": "Multimodal Gemini",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.2-009",
+    "exam": "genai",
+    "section": "GENAI-1.2",
+    "difficulty": "hard",
+    "text": "Which Google Cloud architecture is MOST appropriate for continuously preparing and embedding new documents into a vector store as they arrive?",
+    "options": [
+      "Manual nightly upload to a single notebook",
+      "Cloud Storage event \u2192 Pub/Sub \u2192 Dataflow / Cloud Run for chunk + embed (Vertex AI embeddings) \u2192 Vertex AI Vector Search index updates",
+      "Email each new document to data scientists",
+      "Store documents in a relational DB without embeddings"
+    ],
+    "correct_index": 1,
+    "explanation": "Event-driven ingest with Pub/Sub and Dataflow/Cloud Run for chunking & embedding is the standard near-real-time RAG indexing pipeline. Manual notebooks, email, and relational-without-embeddings can't sustain near-real-time ingest.",
+    "doc_links": [
+      {
+        "title": "RAG ingestion architecture",
+        "url": "https://cloud.google.com/architecture/rag-capable-gen-ai-app-using-vertex-ai"
+      },
+      {
+        "title": "Vertex AI embeddings",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.3-002",
+    "exam": "genai",
+    "section": "GENAI-1.3",
+    "difficulty": "easy",
+    "text": "Which layer of the gen AI landscape is represented by foundation models such as Gemini, Claude, or Llama?",
+    "options": [
+      "Infrastructure layer",
+      "Model layer",
+      "Application layer",
+      "Storage layer"
+    ],
+    "correct_index": 1,
+    "explanation": "Foundation models live at the model layer. Infrastructure provides compute/storage, applications consume models, and storage is part of infrastructure.",
+    "doc_links": [
+      {
+        "title": "Gen AI on Google Cloud overview",
+        "url": "https://cloud.google.com/use-cases/generative-ai"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.3-003",
+    "exam": "genai",
+    "section": "GENAI-1.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud product is the platform layer for building, tuning, and deploying foundation models?",
+    "options": [
+      "Vertex AI",
+      "Looker",
+      "BigQuery",
+      "Cloud Run"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI is Google's unified ML/Gen AI platform layer. Looker is BI, BigQuery is analytics warehouse, Cloud Run is generic serverless compute.",
+    "doc_links": [
+      {
+        "title": "Vertex AI overview",
+        "url": "https://cloud.google.com/vertex-ai/docs"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.3-004",
+    "exam": "genai",
+    "section": "GENAI-1.3",
+    "difficulty": "easy",
+    "text": "Which layer of a gen AI stack typically includes the application UI, business logic, and prompt orchestration?",
+    "options": [
+      "Application layer",
+      "Hardware accelerators",
+      "Foundation model training",
+      "Network fabric"
+    ],
+    "correct_index": 0,
+    "explanation": "UI, business logic, and prompt orchestration sit at the application layer. Accelerators, training, and networks are infrastructure or model-layer concerns.",
+    "doc_links": [
+      {
+        "title": "Gen AI app architecture",
+        "url": "https://cloud.google.com/architecture/ai-ml/generative-ai-rag"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.3-005",
+    "exam": "genai",
+    "section": "GENAI-1.3",
+    "difficulty": "medium",
+    "text": "Which component is the canonical 'agent layer' in Google's gen AI stack \u2014 enabling models to plan, call tools, and orchestrate multi-step tasks?",
+    "options": [
+      "BigQuery, Google's serverless analytics warehouse used for SQL queries and batch ML training over large datasets",
+      "Vertex AI Agent Builder (Agent Engine, conversational agents)",
+      "Cloud Bigtable, a wide-column NoSQL database for low-latency operational lookups at petabyte scale",
+      "Cloud SQL, the managed relational database service for MySQL, PostgreSQL, and SQL Server workloads"
+    ],
+    "correct_index": 1,
+    "explanation": "Vertex AI Agent Builder is the dedicated agent orchestration layer for building and deploying production agents. The other services are databases/warehouses, not agent platforms.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Agent Builder",
+        "url": "https://cloud.google.com/products/agent-builder"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.3-006",
+    "exam": "genai",
+    "section": "GENAI-1.3",
+    "difficulty": "medium",
+    "text": "Which infrastructure layer is the foundation for training and serving large foundation models on Google Cloud?",
+    "options": [
+      "Cloud TPUs and GPU-accelerated VMs (e.g., A3) on optimized networking",
+      "Cloud Functions, the event-driven FaaS runtime capped at short execution durations and modest CPU/memory limits",
+      "Cloud Spanner, the globally distributed strongly consistent relational database used for transactional workloads",
+      "App Engine standard, the sandboxed PaaS for stateless web request handlers with strict runtime restrictions"
+    ],
+    "correct_index": 0,
+    "explanation": "TPUs and GPU-accelerated VMs over high-bandwidth networking are the AI infrastructure layer for foundation models. Functions/Spanner/App Engine are not designed as model-training compute substrates.",
+    "doc_links": [
+      {
+        "title": "Cloud TPUs",
+        "url": "https://cloud.google.com/tpu/docs/intro-to-tpu"
+      },
+      {
+        "title": "AI Hypercomputer",
+        "url": "https://cloud.google.com/products/ai-infrastructure"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.3-007",
+    "exam": "genai",
+    "section": "GENAI-1.3",
+    "difficulty": "hard",
+    "text": "An enterprise wants to consume foundation models from Google AND third-party / open-source models on a unified platform with consistent governance. Which Vertex AI feature fits BEST?",
+    "options": [
+      "Manually integrate each model provider in the application code",
+      "Vertex AI Model Garden (Google, partner, and open-source models with unified deployment, governance, and observability)",
+      "Cloud Functions wrappers per provider",
+      "BigQuery functions only"
+    ],
+    "correct_index": 1,
+    "explanation": "Model Garden centralizes Google, partner, and OSS models on Vertex AI with unified deployment and governance. Custom integrations and Cloud Functions wrappers don't deliver the unified governance/observability.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Model Garden",
+        "url": "https://cloud.google.com/model-garden"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.3-008",
+    "exam": "genai",
+    "section": "GENAI-1.3",
+    "difficulty": "hard",
+    "text": "An organization wants to build a private grounded search experience over their unstructured documents that automatically handles ingestion, embedding, retrieval, and generation. Which managed Google Cloud product is the BEST fit?",
+    "options": [
+      "A self-built RAG stack on Cloud SQL for PostgreSQL with the pgvector extension and a custom ingestion pipeline written in Python",
+      "Vertex AI Search (formerly Enterprise Search) and/or Conversational Agents",
+      "BigQuery alone, using ML.GENERATE_TEXT and remote model functions to retrieve and answer over documents staged as table rows",
+      "Cloud SQL for MySQL with FULLTEXT indexes against a documents table, queried by the application for keyword-based retrieval"
+    ],
+    "correct_index": 1,
+    "explanation": "Vertex AI Search is the managed end-to-end grounded search/answer service, with conversational agents on top. Custom RAG, BigQuery alone, and Cloud SQL FTS require significantly more engineering and lack managed answer generation.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Search",
+        "url": "https://cloud.google.com/enterprise-search"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.3-009",
+    "exam": "genai",
+    "section": "GENAI-1.3",
+    "difficulty": "hard",
+    "text": "Which Google Cloud capability enables agents to call external tools (APIs, databases, enterprise systems) safely with structured arguments and policy controls?",
+    "options": [
+      "Cloud DNS",
+      "Vertex AI function calling and Agent Builder tool integrations (with IAM and structured schemas)",
+      "Cloud Logging",
+      "Pub/Sub topics only"
+    ],
+    "correct_index": 1,
+    "explanation": "Function calling on Vertex AI plus Agent Builder tool integrations let models invoke external tools with structured arguments and IAM-bound permissions. The other services don't define agent tool semantics.",
+    "doc_links": [
+      {
+        "title": "Vertex AI function calling",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/function-calling"
+      },
+      {
+        "title": "Agent Builder",
+        "url": "https://cloud.google.com/products/agent-builder"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.4-003",
+    "exam": "genai",
+    "section": "GENAI-1.4",
+    "difficulty": "easy",
+    "text": "Which Google foundation model family is optimized for natively multimodal reasoning across text, images, audio, and video?",
+    "options": [
+      "Gemini",
+      "PaLM 1",
+      "BERT",
+      "Word2Vec"
+    ],
+    "correct_index": 0,
+    "explanation": "Gemini is Google's natively multimodal foundation model family. PaLM/BERT/Word2Vec predate or aren't natively multimodal.",
+    "doc_links": [
+      {
+        "title": "Gemini models on Vertex AI",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.4-004",
+    "exam": "genai",
+    "section": "GENAI-1.4",
+    "difficulty": "easy",
+    "text": "Which Google model family targets image generation from text prompts?",
+    "options": [
+      "Imagen",
+      "Chirp",
+      "Codey",
+      "Veo"
+    ],
+    "correct_index": 0,
+    "explanation": "Imagen is Google's text-to-image model. Chirp is speech, Codey is code, and Veo is video generation.",
+    "doc_links": [
+      {
+        "title": "Imagen on Vertex AI",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/image/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.4-005",
+    "exam": "genai",
+    "section": "GENAI-1.4",
+    "difficulty": "medium",
+    "text": "A product team needs the lowest cost / latency Gemini variant for high-volume routing/classification, with acceptable quality. Which option fits BEST?",
+    "options": [
+      "Gemini Pro / Ultra at peak settings",
+      "Gemini Flash (or Flash-Lite) for low latency / cost",
+      "An OSS 70B parameter model self-hosted",
+      "BERT base"
+    ],
+    "correct_index": 1,
+    "explanation": "Gemini Flash variants are designed for low-latency, high-volume tasks. Pro/Ultra cost more, self-hosted 70B adds operational burden, BERT lacks gen AI capabilities at this scope.",
+    "doc_links": [
+      {
+        "title": "Gemini model variants",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.4-006",
+    "exam": "genai",
+    "section": "GENAI-1.4",
+    "difficulty": "medium",
+    "text": "Which Google model is targeted at enterprise speech-to-text across many languages?",
+    "options": [
+      "Chirp (Universal Speech Model)",
+      "Imagen",
+      "Veo",
+      "Codey"
+    ],
+    "correct_index": 0,
+    "explanation": "Chirp / USM is Google's enterprise speech model. Imagen is image, Veo is video, Codey is code.",
+    "doc_links": [
+      {
+        "title": "Chirp / Universal Speech Model",
+        "url": "https://cloud.google.com/speech-to-text/v2/docs/chirp-model"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.4-007",
+    "exam": "genai",
+    "section": "GENAI-1.4",
+    "difficulty": "hard",
+    "text": "An enterprise needs the highest-capability Gemini model for complex multi-step reasoning over long documents (millions of tokens). Which capability is MOST relevant when choosing a Gemini variant?",
+    "options": [
+      "Smallest possible context window",
+      "Long-context support (e.g., 1M+ token context window) on the appropriate Gemini Pro variant, with grounding to manage cost",
+      "Image-only model",
+      "A model with no tool-calling support"
+    ],
+    "correct_index": 1,
+    "explanation": "Long-context Gemini Pro variants support million-token contexts and pair well with grounding to control cost. The other choices either reduce capability or don't fit the workload.",
+    "doc_links": [
+      {
+        "title": "Long-context Gemini",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.4-008",
+    "exam": "genai",
+    "section": "GENAI-1.4",
+    "difficulty": "hard",
+    "text": "An organization wants to deploy an open-source model (e.g., Llama or Gemma) alongside Gemini on Google Cloud with managed serving. Which approach is BEST?",
+    "options": [
+      "Self-host on a single VM with no autoscaling",
+      "Deploy from Vertex AI Model Garden to Vertex AI endpoints with autoscaling and unified governance",
+      "Run only on the developer's laptop",
+      "Re-implement the model from scratch"
+    ],
+    "correct_index": 1,
+    "explanation": "Model Garden + Vertex AI endpoints provides managed deployment, autoscaling, and unified governance across Gemini and OSS models. The other options sacrifice scale, reliability, or feasibility.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Model Garden",
+        "url": "https://cloud.google.com/model-garden"
+      },
+      {
+        "title": "Gemma open models",
+        "url": "https://ai.google.dev/gemma"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.4-009",
+    "exam": "genai",
+    "section": "GENAI-1.4",
+    "difficulty": "hard",
+    "text": "Which Google offering generates high-quality video clips from text or image prompts?",
+    "options": [
+      "Veo on Vertex AI",
+      "Imagen only",
+      "Chirp",
+      "BigQuery ML"
+    ],
+    "correct_index": 0,
+    "explanation": "Veo is Google's text/image-to-video generation model. Imagen is for images, Chirp is speech, BigQuery ML doesn't generate video.",
+    "doc_links": [
+      {
+        "title": "Veo on Vertex AI",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/video/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.1-002",
+    "exam": "genai",
+    "section": "GENAI-2.1",
+    "difficulty": "easy",
+    "text": "Which is a strength of Google Cloud for gen AI workloads?",
+    "options": [
+      "AI-optimized infrastructure (TPUs/GPUs), in-house foundation models (Gemini), and an integrated platform (Vertex AI)",
+      "No managed AI offerings",
+      "Single-region only",
+      "Customer-managed model training without managed services"
+    ],
+    "correct_index": 0,
+    "explanation": "Google's strengths combine AI infrastructure, in-house foundation models, and an integrated platform. The other options are inaccurate.",
+    "doc_links": [
+      {
+        "title": "Why Google for AI",
+        "url": "https://cloud.google.com/ai"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.1-003",
+    "exam": "genai",
+    "section": "GENAI-2.1",
+    "difficulty": "easy",
+    "text": "Which custom Google chip is purpose-built to accelerate ML training and inference?",
+    "options": [
+      "Cloud TPU",
+      "Cloud Bigtable",
+      "Cloud Memorystore",
+      "Cloud DNS"
+    ],
+    "correct_index": 0,
+    "explanation": "Cloud TPUs are Google's custom ML accelerators. Bigtable/Memorystore/DNS are not ML accelerators.",
+    "doc_links": [
+      {
+        "title": "Cloud TPU",
+        "url": "https://cloud.google.com/tpu/docs/intro-to-tpu"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.1-004",
+    "exam": "genai",
+    "section": "GENAI-2.1",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service is the unified platform for ML and gen AI development?",
+    "options": [
+      "Vertex AI",
+      "Looker",
+      "Compute Engine",
+      "Cloud Run"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI is the unified ML/Gen AI platform. Looker is BI, Compute Engine is general VMs, Cloud Run is general serverless.",
+    "doc_links": [
+      {
+        "title": "Vertex AI overview",
+        "url": "https://cloud.google.com/vertex-ai/docs"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.1-005",
+    "exam": "genai",
+    "section": "GENAI-2.1",
+    "difficulty": "medium",
+    "text": "Which combination BEST illustrates Google Cloud's gen AI value proposition for enterprises?",
+    "options": [
+      "Open data lake on object storage only",
+      "Foundation models (Gemini & partner models in Model Garden) + Vertex AI platform + Google data tools (BigQuery, Looker) + responsible AI tooling",
+      "A single Compute Engine VM running an OSS model",
+      "Spreadsheets and email"
+    ],
+    "correct_index": 1,
+    "explanation": "The integrated story is models + platform + data tools + Responsible AI. The others either capture only one piece or are inadequate for enterprise scale.",
+    "doc_links": [
+      {
+        "title": "Why Google for AI",
+        "url": "https://cloud.google.com/ai"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.1-006",
+    "exam": "genai",
+    "section": "GENAI-2.1",
+    "difficulty": "medium",
+    "text": "An enterprise emphasizes 'enterprise-ready' AI: data residency, IP indemnification, and admin controls. Which Google Cloud properties are MOST relevant?",
+    "options": [
+      "Region selection / data residency, IP indemnification for Gemini outputs, admin controls and governance via IAM/VPC-SC, and audit logging",
+      "Free tier only",
+      "Public-internet-only data plane",
+      "No SLA"
+    ],
+    "correct_index": 0,
+    "explanation": "Data residency, IP indemnification, governance, and audit are the enterprise-ready properties Google highlights. Free tier, public-only, and no SLA contradict enterprise readiness.",
+    "doc_links": [
+      {
+        "title": "Generative AI indemnification",
+        "url": "https://cloud.google.com/blog/products/ai-machine-learning/protecting-customers-with-generative-ai-indemnification"
+      },
+      {
+        "title": "Data residency",
+        "url": "https://cloud.google.com/about/locations"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.1-007",
+    "exam": "genai",
+    "section": "GENAI-2.1",
+    "difficulty": "hard",
+    "text": "An enterprise must keep its gen AI prompts and responses inside its own VPC perimeter without traversing the public internet. Which Google Cloud combination fits BEST?",
+    "options": [
+      "Public-internet calls to a third-party API",
+      "Vertex AI accessed via Private Service Connect / private endpoints, inside a VPC Service Controls perimeter, with CMEK keys",
+      "Per-user laptop API keys",
+      "Disable Vertex AI"
+    ],
+    "correct_index": 1,
+    "explanation": "PSC/private endpoints + VPC-SC + CMEK is the canonical enterprise privacy posture for Vertex AI. Public-internet calls, laptop API keys, and disabling the service contradict the requirement.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Private Service Connect",
+        "url": "https://cloud.google.com/vertex-ai/docs/general/vpc-service-controls"
+      },
+      {
+        "title": "VPC Service Controls",
+        "url": "https://cloud.google.com/vpc-service-controls/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.1-008",
+    "exam": "genai",
+    "section": "GENAI-2.1",
+    "difficulty": "hard",
+    "text": "Which Google Cloud capability uniquely combines the company's AI research lineage with cloud-scale serving (e.g., transformers, JAX, TPUs, Gemini) into a single integrated stack?",
+    "options": [
+      "Cloud Bigtable replication",
+      "Vertex AI on AI Hypercomputer (TPUs/GPUs, JAX/PyTorch tooling, Gemini/Model Garden, integrated MLOps)",
+      "Cloud Tasks queues",
+      "Cloud Logging"
+    ],
+    "correct_index": 1,
+    "explanation": "Vertex AI on AI Hypercomputer integrates Google's research/infra lineage (TPUs, JAX, transformers) with managed serving and MLOps. The other services are unrelated to that integrated AI stack.",
+    "doc_links": [
+      {
+        "title": "AI Hypercomputer",
+        "url": "https://cloud.google.com/products/ai-infrastructure"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.1-009",
+    "exam": "genai",
+    "section": "GENAI-2.1",
+    "difficulty": "hard",
+    "text": "Which Google offering provides curated open-source software bundles for gen AI development, audited and signed by Google?",
+    "options": [
+      "Assured Open Source Software (Assured OSS)",
+      "Cloud Build only",
+      "Cloud Source Repositories",
+      "Vertex AI Workbench"
+    ],
+    "correct_index": 0,
+    "explanation": "Assured OSS provides Google-curated and signed OSS packages, including AI/ML libraries. Cloud Build/Source Repos/Workbench address other needs.",
+    "doc_links": [
+      {
+        "title": "Assured Open Source Software",
+        "url": "https://cloud.google.com/security/products/assured-open-source-software"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.2-002",
+    "exam": "genai",
+    "section": "GENAI-2.2",
+    "difficulty": "easy",
+    "text": "Which Google product is the consumer/standalone Gemini chat experience?",
+    "options": [
+      "The Gemini app",
+      "Vertex AI Workbench",
+      "Bigtable",
+      "Cloud Run"
+    ],
+    "correct_index": 0,
+    "explanation": "The Gemini app is Google's consumer-facing Gemini chat product. Workbench is for ML developers; Bigtable/Run are infrastructure.",
+    "doc_links": [
+      {
+        "title": "Gemini app",
+        "url": "https://gemini.google.com/"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.2-003",
+    "exam": "genai",
+    "section": "GENAI-2.2",
+    "difficulty": "easy",
+    "text": "Which feature embeds Gemini directly into Google Workspace apps (Docs, Sheets, Slides, Gmail, Meet) for productivity assistance?",
+    "options": [
+      "Gemini for Workspace",
+      "Cloud Functions",
+      "BigQuery DataFrames",
+      "Cloud DNS"
+    ],
+    "correct_index": 0,
+    "explanation": "Gemini for Workspace integrates Gemini across Workspace apps. The other options are unrelated.",
+    "doc_links": [
+      {
+        "title": "Gemini for Workspace",
+        "url": "https://workspace.google.com/solutions/ai/"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.2-004",
+    "exam": "genai",
+    "section": "GENAI-2.2",
+    "difficulty": "medium",
+    "text": "An admin needs Gemini for Workspace responses to be grounded in the organization's Drive content respecting per-user permissions. Which behavior is correct?",
+    "options": [
+      "Gemini ignores Drive permissions",
+      "Gemini for Workspace honors existing Drive sharing permissions when grounding answers \u2014 users only see content they already have access to",
+      "Gemini exposes all org data to all users",
+      "Gemini disables Drive when active"
+    ],
+    "correct_index": 1,
+    "explanation": "Gemini for Workspace respects per-user Drive permissions; users only see content they're authorized to see. The other options misstate the security model.",
+    "doc_links": [
+      {
+        "title": "Gemini for Workspace privacy & security",
+        "url": "https://gemini.google/overview/"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.2-005",
+    "exam": "genai",
+    "section": "GENAI-2.2",
+    "difficulty": "medium",
+    "text": "An organization's admin wants to control which users can access Gemini features in Workspace. Which Google product is used?",
+    "options": [
+      "Google Admin console (Workspace admin) for license/group assignment and policy",
+      "Cloud DNS console",
+      "Cloud Logging",
+      "Vertex AI Studio"
+    ],
+    "correct_index": 0,
+    "explanation": "Workspace admin console manages license assignment and policies for Gemini for Workspace. The other consoles don't manage Workspace user access.",
+    "doc_links": [
+      {
+        "title": "Workspace admin help",
+        "url": "https://gemini.google/overview/"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.2-006",
+    "exam": "genai",
+    "section": "GENAI-2.2",
+    "difficulty": "medium",
+    "text": "Which Gemini for Workspace capability lets users summarize and ask questions about a long Google Doc?",
+    "options": [
+      "'Help me' / Gemini side panel in Docs",
+      "BigQuery scheduled queries",
+      "Cloud Tasks",
+      "Cloud DNS"
+    ],
+    "correct_index": 0,
+    "explanation": "The Gemini side panel in Docs (and other Workspace apps) summarizes and answers questions about the active document. The other services are unrelated.",
+    "doc_links": [
+      {
+        "title": "Use Gemini in Docs",
+        "url": "https://gemini.google/overview/"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.2-007",
+    "exam": "genai",
+    "section": "GENAI-2.2",
+    "difficulty": "hard",
+    "text": "An enterprise wants assurance that Gemini for Workspace will NOT use their content to train Google's foundation models. Which statement is correct?",
+    "options": [
+      "Google trains its foundation models on Workspace customer content by default and customers must explicitly purchase an opt-out add-on",
+      "Google does not use Workspace customer content to train its foundation models, and provides enterprise data protection commitments",
+      "Customers must individually opt every user out via support tickets, and the opt-out applies only after the next billing cycle",
+      "Gemini for Workspace cannot operate on customer content at all and is limited to chatting against public web information sources"
+    ],
+    "correct_index": 1,
+    "explanation": "Google's Workspace commitments state customer content isn't used to train foundation models. The other statements misrepresent Google's documented data-handling commitments.",
+    "doc_links": [
+      {
+        "title": "Gemini for Workspace privacy hub",
+        "url": "https://cloud.google.com/security"
+      },
+      {
+        "title": "Generative AI in Workspace privacy",
+        "url": "https://gemini.google/overview/"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.2-008",
+    "exam": "genai",
+    "section": "GENAI-2.2",
+    "difficulty": "hard",
+    "text": "An admin wants to deploy custom 'Gems' (assistants with custom instructions and grounding) for specific user groups. Which Google product enables this?",
+    "options": [
+      "Build per-team Cloud Functions that wrap the Gemini API and gate access through Identity-Aware Proxy headers from the corporate IdP",
+      "Gemini app Gems (and Workspace admin policies for distribution)",
+      "Cloud Source Repositories holding versioned prompt files that each user group clones into their own Workspace add-on configuration",
+      "BigQuery datasets containing the custom instruction text, queried at runtime by a Workspace add-on for each user group's session"
+    ],
+    "correct_index": 1,
+    "explanation": "Gems are user-created custom assistants in the Gemini app, distributable per Workspace admin policy. The other services don't host Gems.",
+    "doc_links": [
+      {
+        "title": "Gemini app Gems",
+        "url": "https://gemini.google/overview/gems/"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.2-009",
+    "exam": "genai",
+    "section": "GENAI-2.2",
+    "difficulty": "hard",
+    "text": "A regulated customer must store Workspace data in a specific region. Which feature is RELEVANT?",
+    "options": [
+      "Workspace data regions for covered Workspace data",
+      "Cloud Run service revisions, which let you pin traffic to a specific deployed image of a Cloud Run service",
+      "Cloud DNS managed zones for publishing authoritative DNS records for the customer's public domain names",
+      "BigQuery query history, the per-project log of recently executed SQL jobs and their billing bytes scanned"
+    ],
+    "correct_index": 0,
+    "explanation": "Workspace Data Regions controls where covered customer data is stored at rest. The other features don't control Workspace data residency.",
+    "doc_links": [
+      {
+        "title": "Workspace Data Regions",
+        "url": "https://support.google.com/a/answer/9223653"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.3-002",
+    "exam": "genai",
+    "section": "GENAI-2.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud product provides a managed conversational AI platform for building virtual agents (chat & voice)?",
+    "options": [
+      "Conversational Agents (formerly Dialogflow CX) on Vertex AI",
+      "Cloud DNS, Google Cloud's managed authoritative DNS service for publishing public and private zones",
+      "Cloud Tasks, a fully managed asynchronous task-queue service used to dispatch HTTP and App Engine work",
+      "Memorystore for Redis, a managed in-memory cache used for low-latency session and lookup data"
+    ],
+    "correct_index": 0,
+    "explanation": "Conversational Agents (Dialogflow CX) is Google's conversational platform. The other services are unrelated.",
+    "doc_links": [
+      {
+        "title": "Conversational Agents",
+        "url": "https://cloud.google.com/dialogflow/cx/docs"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.3-003",
+    "exam": "genai",
+    "section": "GENAI-2.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud product provides AI-powered enterprise search over an organization's documents and websites?",
+    "options": [
+      "Vertex AI Search",
+      "Cloud SQL",
+      "Pub/Sub",
+      "Cloud DNS"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI Search is Google's managed enterprise-grade search/answer service. The other services are unrelated.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Search",
+        "url": "https://cloud.google.com/enterprise-search"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.3-004",
+    "exam": "genai",
+    "section": "GENAI-2.3",
+    "difficulty": "easy",
+    "text": "Which Customer Engagement Suite (CES) component enables AI-driven contact-center interactions including agent assist?",
+    "options": [
+      "Customer Engagement Suite \u2014 Agent Assist / Conversational Insights",
+      "Cloud Bigtable storing per-conversation transcripts that the contact-center supervisor queries by row key during each live call",
+      "Cloud Functions invoked from the contact-center IVR webhook to look up customer records before routing the call to a human agent",
+      "BigQuery scheduled queries running nightly to summarize agent performance and post the results to the operations dashboard"
+    ],
+    "correct_index": 0,
+    "explanation": "CES brings together Conversational Agents, Agent Assist, and Conversational Insights for AI-driven contact center experiences. The other services are unrelated.",
+    "doc_links": [
+      {
+        "title": "Customer Engagement Suite",
+        "url": "https://cloud.google.com/solutions/contact-center-ai-platform"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.3-005",
+    "exam": "genai",
+    "section": "GENAI-2.3",
+    "difficulty": "medium",
+    "text": "A retailer wants generative answers grounded in their product catalog and policies, with citations. Which approach fits BEST?",
+    "options": [
+      "Use a public chatbot with no grounding",
+      "Vertex AI Search (or Conversational Agents data stores) with the catalog/policies as data stores, returning grounded answers with citations",
+      "Email customers a PDF",
+      "Run pgvector on a single VM with no UI"
+    ],
+    "correct_index": 1,
+    "explanation": "Vertex AI Search / Conversational Agents data stores provide grounded answers with citations, the canonical retail Q&A pattern. Public chatbots lack grounding; PDFs aren't interactive; self-built lacks the managed integration.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Search citations",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/grounding/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.3-006",
+    "exam": "genai",
+    "section": "GENAI-2.3",
+    "difficulty": "medium",
+    "text": "Which CES capability listens to live agent-customer conversations and suggests answers in real time?",
+    "options": [
+      "Agent Assist",
+      "Conversational Insights",
+      "Vertex AI Workbench",
+      "Cloud Logging"
+    ],
+    "correct_index": 0,
+    "explanation": "Agent Assist provides real-time suggestions to human agents. Insights does post-call analytics; Workbench/Logging are unrelated to live agent assistance.",
+    "doc_links": [
+      {
+        "title": "Agent Assist",
+        "url": "https://cloud.google.com/agent-assist"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.3-007",
+    "exam": "genai",
+    "section": "GENAI-2.3",
+    "difficulty": "hard",
+    "text": "A bank deploying a CES-based virtual agent for account servicing wants to gracefully escalate to a human when the agent's confidence is low or the topic is sensitive. Which design fits BEST?",
+    "options": [
+      "Block escalation entirely and require the agent to fully resolve every conversation by repeatedly clarifying the request",
+      "Configure intent/route handlers and confidence thresholds in Conversational Agents that hand off to a human queue via CCAI Platform or partner CCaaS",
+      "Email the customer a follow-up form whenever the agent is unsure and end the live voice or chat session immediately",
+      "Repeat the agent's most recent answer with rephrased wording until the customer accepts or disconnects on their own"
+    ],
+    "correct_index": 1,
+    "explanation": "Conversational Agents supports route handlers and confidence-based escalation to human agents via the CCAI Platform (or partner CCaaS). Blocking escalation, ending the call, or repeating answers are not supported best practices.",
+    "doc_links": [
+      {
+        "title": "Handoff in Conversational Agents",
+        "url": "https://cloud.google.com/dialogflow/cx/docs"
+      },
+      {
+        "title": "CCAI Platform",
+        "url": "https://cloud.google.com/solutions/contact-center-ai-platform"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.3-008",
+    "exam": "genai",
+    "section": "GENAI-2.3",
+    "difficulty": "hard",
+    "text": "An organization wants to evaluate the quality of generative answers from Vertex AI Search before launching to customers. Which approach is BEST?",
+    "options": [
+      "Launch to all customers immediately and rely on user complaints and support tickets to surface answer-quality regressions",
+      "Build an offline evaluation set, score with automated metrics (retrieval recall, groundedness, helpfulness) plus human review, and gate launch on thresholds",
+      "Compare the new agent's answers side-by-side with screenshots of a competitor's UI and ship if they look similar",
+      "Disable telemetry and rating collection in production so user data is never stored or analyzed by the team"
+    ],
+    "correct_index": 1,
+    "explanation": "Offline eval sets + automated metrics + human review with launch gates is the standard quality assurance pattern. Relying on complaints, screenshots, or no telemetry is not measurable.",
+    "doc_links": [
+      {
+        "title": "Vertex AI evaluation",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/models/evaluation-overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.3-009",
+    "exam": "genai",
+    "section": "GENAI-2.3",
+    "difficulty": "hard",
+    "text": "Which Google service provides post-call analytics on contact-center conversations (sentiment, topics, compliance)?",
+    "options": [
+      "Conversational Insights",
+      "Cloud DNS",
+      "Cloud Tasks",
+      "BigQuery only"
+    ],
+    "correct_index": 0,
+    "explanation": "Conversational Insights analyzes conversations for sentiment, topics, and compliance signals. The other services don't perform conversation analytics.",
+    "doc_links": [
+      {
+        "title": "Conversational Insights",
+        "url": "https://cloud.google.com/contact-center/ccai-platform/docs"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.4-004",
+    "exam": "genai",
+    "section": "GENAI-2.4",
+    "difficulty": "easy",
+    "text": "Which Vertex AI surface lets developers experiment with prompts against Gemini and other models in a UI?",
+    "options": [
+      "Vertex AI Studio",
+      "BigQuery Studio",
+      "Cloud Run console",
+      "Cloud Source Repositories"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI Studio is the prompt experimentation UI for Gemini and partner models. The others address different workflows.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Studio",
+        "url": "https://cloud.google.com/generative-ai-studio"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.4-005",
+    "exam": "genai",
+    "section": "GENAI-2.4",
+    "difficulty": "easy",
+    "text": "Which SDK is the recommended way to call Gemini and other Vertex AI models from code?",
+    "options": [
+      "The Vertex AI SDK / Google Gen AI SDK (Python, Java, Go, Node.js, etc.)",
+      "JDBC",
+      "Apache Kafka client",
+      "ODBC"
+    ],
+    "correct_index": 0,
+    "explanation": "Google provides Vertex AI / Google Gen AI SDKs in multiple languages for calling Gemini and other models. The others are not Vertex AI client SDKs.",
+    "doc_links": [
+      {
+        "title": "Google Gen AI SDK",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/sdks/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.4-007",
+    "exam": "genai",
+    "section": "GENAI-2.4",
+    "difficulty": "hard",
+    "text": "A developer team wants to register, version, and govern prompt templates as first-class artifacts. Which Vertex AI capability fits BEST?",
+    "options": [
+      "Vertex AI prompt management (and Model Registry for tuned models)",
+      "Cloud Storage object naming convention only",
+      "Email a Google Doc to the team",
+      "Source code comments"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI prompt management treats prompts as versioned artifacts; Model Registry tracks tuned models. Naming conventions, docs, and comments don't give versioned governance.",
+    "doc_links": [
+      {
+        "title": "Vertex AI prompt management",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-management"
+      },
+      {
+        "title": "Vertex AI Model Registry",
+        "url": "https://cloud.google.com/vertex-ai/docs/model-registry/introduction"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.4-008",
+    "exam": "genai",
+    "section": "GENAI-2.4",
+    "difficulty": "hard",
+    "text": "A team wants production observability of token usage, latency, and safety-filter hits across Vertex AI gen AI calls. Which approach fits BEST?",
+    "options": [
+      "Use Cloud Monitoring + Cloud Logging metrics on Vertex AI generative AI usage and errors, plus custom app metrics for token spend per feature",
+      "Manually review the Vertex AI request logs at the end of each calendar month during the team's metrics review meeting",
+      "Disable request and response logging on the Vertex AI endpoints to keep production storage and egress costs predictable",
+      "Send an email to the on-call engineer on every Vertex AI generation request that exceeds the configured token budget"
+    ],
+    "correct_index": 0,
+    "explanation": "Cloud Monitoring/Logging plus custom app metrics provide production observability of usage and safety. Manual review, no logging, or per-request emails don't meet the need.",
+    "doc_links": [
+      {
+        "title": "Vertex AI monitoring",
+        "url": "https://cloud.google.com/vertex-ai/docs/model-monitoring/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.4-009",
+    "exam": "genai",
+    "section": "GENAI-2.4",
+    "difficulty": "hard",
+    "text": "Which Vertex AI capability lets developers tune Gemini efficiently with relatively small labeled datasets while keeping the base model weights unchanged?",
+    "options": [
+      "Parameter-efficient supervised fine-tuning (e.g., adapter-based / LoRA-style supervised tuning) on Vertex AI",
+      "Full retraining of Gemini from scratch on customer-provided text, which requires petabytes of training data and weeks of TPU time",
+      "Direct editing of the Gemini model source code in the Vertex AI Model Garden repository to change generation behavior per request",
+      "Disabling the Gemini API endpoint in the project so the application is forced to fall back to a smaller open Gemma model on GKE"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI offers parameter-efficient supervised tuning that adapts Gemini with limited data and cost, leaving base weights intact. Full retraining is impractical, source code editing isn't supported, and disabling doesn't tune.",
+    "doc_links": [
+      {
+        "title": "Vertex AI tuning",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/models/tune-models"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.5-002",
+    "exam": "genai",
+    "section": "GENAI-2.5",
+    "difficulty": "easy",
+    "text": "Which Google Cloud product is purpose-built for building, deploying, and managing gen AI agents?",
+    "options": [
+      "Vertex AI Agent Builder",
+      "Cloud DNS",
+      "Cloud Tasks",
+      "Cloud SQL"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI Agent Builder includes Agent Engine and Conversational Agents for building/deploying agents. The others aren't agent platforms.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Agent Builder",
+        "url": "https://cloud.google.com/products/agent-builder"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.5-003",
+    "exam": "genai",
+    "section": "GENAI-2.5",
+    "difficulty": "easy",
+    "text": "Which capability lets a Gemini-powered agent reliably invoke external APIs with structured arguments?",
+    "options": [
+      "Function calling",
+      "Cloud DNS",
+      "Cloud Logging",
+      "BigQuery scheduled queries"
+    ],
+    "correct_index": 0,
+    "explanation": "Function calling lets Gemini emit structured tool invocations the application executes. The others aren't tool-invocation mechanisms.",
+    "doc_links": [
+      {
+        "title": "Vertex AI function calling",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/function-calling"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.5-004",
+    "exam": "genai",
+    "section": "GENAI-2.5",
+    "difficulty": "easy",
+    "text": "Which framework / SDK is Google's reference open-source toolkit for building agents that runs on Vertex AI Agent Engine?",
+    "options": [
+      "Agent Development Kit (ADK)",
+      "Cloud DNS",
+      "Cloud Run jobs",
+      "BigQuery DTS"
+    ],
+    "correct_index": 0,
+    "explanation": "ADK is Google's reference agent framework that integrates with Vertex AI Agent Engine. The others are not agent SDKs.",
+    "doc_links": [
+      {
+        "title": "Agent Development Kit",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.5-005",
+    "exam": "genai",
+    "section": "GENAI-2.5",
+    "difficulty": "medium",
+    "text": "An agent must perform multi-step tasks (search the web, query an internal API, write to a database). Which Vertex AI Agent Builder capability fits BEST?",
+    "options": [
+      "A single static prompt",
+      "An agent with declared tools and orchestration via ADK / Agent Engine, with each tool secured by IAM",
+      "A relational join",
+      "A static FAQ"
+    ],
+    "correct_index": 1,
+    "explanation": "Multi-tool agents with orchestration and IAM-bound tools are the canonical pattern. Static prompts/FAQs can't orchestrate; relational joins aren't agents.",
+    "doc_links": [
+      {
+        "title": "Agent Engine",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.5-006",
+    "exam": "genai",
+    "section": "GENAI-2.5",
+    "difficulty": "medium",
+    "text": "Which approach BEST limits the blast radius of an autonomous agent that calls internal APIs?",
+    "options": [
+      "Run as project Owner",
+      "Bind each tool to a least-privilege service account with scoped IAM, and require human-in-the-loop approval for high-impact actions",
+      "Disable IAM",
+      "Log nothing"
+    ],
+    "correct_index": 1,
+    "explanation": "Least-privilege per tool and HITL for high-impact actions keeps agents safe. Owner credentials, disabled IAM, and no logging defeat blast-radius limits.",
+    "doc_links": [
+      {
+        "title": "Agent safety patterns",
+        "url": "https://cloud.google.com/responsible-ai"
+      },
+      {
+        "title": "Least privilege IAM",
+        "url": "https://cloud.google.com/iam/docs/using-iam-securely"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.5-007",
+    "exam": "genai",
+    "section": "GENAI-2.5",
+    "difficulty": "hard",
+    "text": "An organization wants to coordinate multiple specialist agents (e.g., a 'research' agent and a 'writer' agent) within one workflow. Which Google Cloud capability fits BEST?",
+    "options": [
+      "A single monolithic prompt that asks one model to play every role in sequence with no shared state between turns",
+      "Multi-agent orchestration in ADK / Agent Engine with explicit handoff and shared memory",
+      "Cloud Tasks queues alone, dispatching HTTP requests between Cloud Run services with no agent reasoning layer",
+      "Cloud Workflows YAML pipelines that hard-code each agent step as a static call without dynamic planning or memory"
+    ],
+    "correct_index": 1,
+    "explanation": "ADK and Agent Engine support multi-agent orchestration with handoff and memory. A monolithic prompt can't coordinate, Cloud Tasks isn't an agent runtime, and manual copy-paste is not a system.",
+    "doc_links": [
+      {
+        "title": "Multi-agent in ADK",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.5-008",
+    "exam": "genai",
+    "section": "GENAI-2.5",
+    "difficulty": "hard",
+    "text": "Which evaluation strategy is MOST appropriate for an agent that performs multi-step tool use?",
+    "options": [
+      "Only score final answers on accuracy",
+      "Evaluate per-step trajectory: tool selection correctness, argument quality, error handling, and final outcome \u2014 with golden trajectories and human review",
+      "Trust the model and skip evaluation",
+      "Rate by response length"
+    ],
+    "correct_index": 1,
+    "explanation": "Multi-step agents need per-step trajectory evaluation in addition to final-answer accuracy. End-only scoring hides cascading errors; trusting the model or scoring by length isn't evaluation.",
+    "doc_links": [
+      {
+        "title": "Vertex AI evaluation for gen AI",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/models/evaluation-overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.5-009",
+    "exam": "genai",
+    "section": "GENAI-2.5",
+    "difficulty": "hard",
+    "text": "An agent must access enterprise data sources behind a firewall, with audit and policy. Which Google Cloud combination fits BEST?",
+    "options": [
+      "Public-internet HTTP calls with hard-coded API keys",
+      "Vertex AI Agent Engine + Private Service Connect to internal services + IAM-bound tools + VPC-SC perimeter + Cloud Audit Logs",
+      "Email an admin to fetch data",
+      "Disable audit logging"
+    ],
+    "correct_index": 1,
+    "explanation": "Agent Engine + PSC + IAM tools + VPC-SC + audit logs enforces private connectivity, least privilege, perimeter, and auditability. The other options leak credentials, lack scale, or break governance.",
+    "doc_links": [
+      {
+        "title": "Private Service Connect",
+        "url": "https://cloud.google.com/vpc/docs/private-service-connect"
+      },
+      {
+        "title": "VPC Service Controls",
+        "url": "https://cloud.google.com/vpc-service-controls/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.1-002",
+    "exam": "genai",
+    "section": "GENAI-3.1",
+    "difficulty": "easy",
+    "text": "Which technique grounds a foundation model's responses in fresh, authoritative content the model wasn't trained on?",
+    "options": [
+      "Retrieval-Augmented Generation (RAG)",
+      "More aggressive sampling temperature",
+      "Larger batch size",
+      "Disabling safety filters"
+    ],
+    "correct_index": 0,
+    "explanation": "RAG retrieves relevant documents and conditions the model on them, addressing knowledge cutoff and proprietary data. Sampling, batch size, and disabling safety don't ground responses.",
+    "doc_links": [
+      {
+        "title": "Vertex AI grounding",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/grounding/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.1-003",
+    "exam": "genai",
+    "section": "GENAI-3.1",
+    "difficulty": "easy",
+    "text": "Which limitation of foundation models is BEST addressed by adding domain-specific examples through fine-tuning?",
+    "options": [
+      "Insufficient knowledge of a specialized format/style",
+      "Insufficient compute on the user's laptop",
+      "Network latency",
+      "Disk usage"
+    ],
+    "correct_index": 0,
+    "explanation": "Fine-tuning teaches a base model a specialized format/style or domain. Compute, latency, and disk are infrastructure concerns.",
+    "doc_links": [
+      {
+        "title": "Vertex AI tuning",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/models/tune-models"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.1-004",
+    "exam": "genai",
+    "section": "GENAI-3.1",
+    "difficulty": "easy",
+    "text": "Which term describes a foundation model producing confident but incorrect or fabricated information?",
+    "options": [
+      "Hallucination",
+      "Quantization",
+      "Distillation",
+      "Sharding"
+    ],
+    "correct_index": 0,
+    "explanation": "Hallucination is the canonical term for confident but incorrect outputs. The others are training/serving optimization techniques.",
+    "doc_links": [
+      {
+        "title": "Reducing hallucinations with grounding",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/grounding/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.1-005",
+    "exam": "genai",
+    "section": "GENAI-3.1",
+    "difficulty": "medium",
+    "text": "An organization wants to reduce hallucinations in answers about their internal products without retraining the model. Which approach is RECOMMENDED?",
+    "options": [
+      "Increase temperature to encourage diversity",
+      "Ground the model with RAG over the product knowledge base and require the model to cite sources",
+      "Switch to an older, smaller model",
+      "Disable evaluation"
+    ],
+    "correct_index": 1,
+    "explanation": "Grounding via RAG with required citations is the canonical hallucination mitigation when retraining is off the table. Higher temperature increases hallucinations; older models reduce capability; no evaluation hides quality issues.",
+    "doc_links": [
+      {
+        "title": "Grounding overview",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/grounding/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.1-006",
+    "exam": "genai",
+    "section": "GENAI-3.1",
+    "difficulty": "medium",
+    "text": "An app needs Gemini answers to reflect current public events. Which Google capability fits BEST?",
+    "options": [
+      "Train a new model from scratch every day",
+      "Enable grounding with Google Search on Vertex AI",
+      "Disable safety filters",
+      "Wait for the next model version"
+    ],
+    "correct_index": 1,
+    "explanation": "Grounding with Google Search lets Gemini incorporate fresh public web content with citations. Daily retraining is impractical; safety filters are unrelated; waiting for the next release doesn't solve the freshness problem.",
+    "doc_links": [
+      {
+        "title": "Grounding with Google Search",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/grounding/web-grounding"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.1-007",
+    "exam": "genai",
+    "section": "GENAI-3.1",
+    "difficulty": "hard",
+    "text": "An organization with strict cost constraints wants to expose the same Gemini-powered app to 1M+ users while limiting per-call cost and latency. Which combination of techniques is MOST effective?",
+    "options": [
+      "Route every query to the largest available Gemini model so answer quality is maximized regardless of request volume",
+      "Tier requests to Gemini Flash for high-volume cases, cache common responses, prune system instructions, and reserve Pro/Ultra only for complex queries",
+      "Disable streaming responses and return only fully-formed completions to reduce backend overhead per request",
+      "Train a smaller in-house model from scratch using the team's interaction logs and self-host it on Compute Engine"
+    ],
+    "correct_index": 1,
+    "explanation": "Tiered routing, caching, and prompt-size discipline are the canonical cost/latency optimizations. Always-largest, no streaming, or retraining don't address the constraint efficiently.",
+    "doc_links": [
+      {
+        "title": "Gemini model variants",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models"
+      },
+      {
+        "title": "Vertex AI prompt caching",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.1-008",
+    "exam": "genai",
+    "section": "GENAI-3.1",
+    "difficulty": "hard",
+    "text": "A developer needs the model to reliably produce JSON conforming to a strict schema. Which Vertex AI feature is the BEST fit?",
+    "options": [
+      "Free-form prompting only",
+      "Controlled / constrained decoding with JSON schema (response schema / structured output) on Gemini",
+      "Disable JSON output",
+      "Increase top-p"
+    ],
+    "correct_index": 1,
+    "explanation": "Gemini's structured output / response schema enforces JSON shape conformance. Free-form prompting and tweaking sampling are unreliable; disabling JSON defeats the goal.",
+    "doc_links": [
+      {
+        "title": "Gemini structured output",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/control-generated-output"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.1-009",
+    "exam": "genai",
+    "section": "GENAI-3.1",
+    "difficulty": "hard",
+    "text": "A team needs the model to handle very long documents (e.g., 800K+ tokens) without losing coverage. Which approach is BEST?",
+    "options": [
+      "Truncate every long document aggressively to 4K tokens and feed only the first chunk to the model for each query",
+      "Use Gemini long-context (1M+ tokens) with context caching for repeated grounding documents, and chunk only when context exceeds even long-context limits",
+      "Skip the document entirely and ask the model to answer from its general pre-training knowledge of similar source material",
+      "Convert each long document to a sequence of page images and pass only the images to the multimodal model"
+    ],
+    "correct_index": 1,
+    "explanation": "Long-context Gemini plus context caching handles very long documents efficiently and accurately. Truncating loses information; guessing isn't an answer; image conversion loses semantic search.",
+    "doc_links": [
+      {
+        "title": "Long-context Gemini",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models"
+      },
+      {
+        "title": "Context caching",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.3-003",
+    "exam": "genai",
+    "section": "GENAI-3.3",
+    "difficulty": "easy",
+    "text": "Which technique uses retrieved documents at inference time to give a foundation model up-to-date or proprietary context?",
+    "options": [
+      "Grounding via Retrieval-Augmented Generation (RAG)",
+      "Quantization of the foundation model weights to lower precision so the model can fit and serve on smaller GPU or TPU accelerators",
+      "Distillation, where a smaller student model is trained to imitate a larger teacher model's outputs on a curated training corpus",
+      "Sharding the model parameters across multiple accelerators using tensor or pipeline parallelism for higher inference throughput"
+    ],
+    "correct_index": 0,
+    "explanation": "Grounding via RAG injects retrieved passages into the prompt at inference. The other terms describe model compression/serving techniques.",
+    "doc_links": [
+      {
+        "title": "Vertex AI grounding",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/grounding/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.3-004",
+    "exam": "genai",
+    "section": "GENAI-3.3",
+    "difficulty": "easy",
+    "text": "Which Vertex AI capability is the dedicated managed vector database for similarity search at scale?",
+    "options": [
+      "Vertex AI Vector Search",
+      "Cloud SQL for SQL Server",
+      "Cloud Memorystore for Memcached",
+      "BigQuery information schema"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI Vector Search (formerly Matching Engine) is the managed ANN vector store. The other services aren't purpose-built vector indexes.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Vector Search",
+        "url": "https://cloud.google.com/vertex-ai/docs/vector-search/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.3-005",
+    "exam": "genai",
+    "section": "GENAI-3.3",
+    "difficulty": "medium",
+    "text": "Which decoding parameter MOST affects how diverse vs deterministic Gemini's outputs are?",
+    "options": [
+      "Temperature (and top-p / top-k)",
+      "Region",
+      "Service account",
+      "VPC connector"
+    ],
+    "correct_index": 0,
+    "explanation": "Temperature (with top-p/top-k) controls sampling diversity. Region/SA/VPC affect deployment, not generation.",
+    "doc_links": [
+      {
+        "title": "Gemini sampling parameters",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/control-generated-output"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.3-006",
+    "exam": "genai",
+    "section": "GENAI-3.3",
+    "difficulty": "medium",
+    "text": "A team wants deterministic-as-possible outputs for evaluation runs. Which sampling configuration fits BEST?",
+    "options": [
+      "High temperature near 1.0 with top_p set to 0.95 to encourage broad creative variation across each evaluation rerun",
+      "Low temperature (close to 0) and a fixed seed where supported",
+      "Randomize top_k between 1 and 80 on each call so the evaluation harness explores a wide distribution of token choices",
+      "Disable all sampling and decoding parameters and rely on whatever provider defaults are active at request time"
+    ],
+    "correct_index": 1,
+    "explanation": "Low temperature + fixed seed minimizes variability for evaluation. High temperature, randomized k, or no params increases variance.",
+    "doc_links": [
+      {
+        "title": "Sampling parameters",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/control-generated-output"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.3-007",
+    "exam": "genai",
+    "section": "GENAI-3.3",
+    "difficulty": "hard",
+    "text": "An enterprise needs grounded answers from BOTH internal documents AND fresh public web content within one user query. Which Vertex AI capability composition fits BEST?",
+    "options": [
+      "Stand up a public chatbot UI in front of Gemini and let end users paste in URLs they want considered as sources",
+      "Combine grounding with Vertex AI Search (private data store) and grounding with Google Search in the same Gemini call",
+      "Have analysts manually copy-paste excerpts from internal docs and live web pages into each prompt as user-supplied context",
+      "Disable grounding entirely and rely on the foundation model's pre-training to cover both internal and public knowledge"
+    ],
+    "correct_index": 1,
+    "explanation": "Vertex AI supports composing private-data grounding (Vertex AI Search) with Google Search grounding in a single Gemini call. The other options can't satisfy both sources simultaneously.",
+    "doc_links": [
+      {
+        "title": "Grounding with Vertex AI Search",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/grounding/overview"
+      },
+      {
+        "title": "Grounding with Google Search",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/grounding/web-grounding"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.3-008",
+    "exam": "genai",
+    "section": "GENAI-3.3",
+    "difficulty": "hard",
+    "text": "Which retrieval-quality issue is BEST addressed by hybrid retrieval (combining keyword + dense embeddings)?",
+    "options": [
+      "Network latency",
+      "Recall failures on rare entities or exact terms that pure dense embeddings miss",
+      "Service-account permissions",
+      "Region selection"
+    ],
+    "correct_index": 1,
+    "explanation": "Hybrid retrieval combines dense (semantic) and sparse (keyword) embeddings, which improves recall on rare entities and exact-term queries that dense embeddings alone miss. The other options aren't retrieval-quality issues.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Vector Search: About hybrid search",
+        "url": "https://cloud.google.com/vertex-ai/docs/vector-search/about-hybrid-search"
+      },
+      {
+        "title": "Vector Search overview (sparse vs dense embeddings)",
+        "url": "https://cloud.google.com/vertex-ai/docs/vector-search/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.3-009",
+    "exam": "genai",
+    "section": "GENAI-3.3",
+    "difficulty": "hard",
+    "text": "Which Vertex AI feature lets developers reduce repeated tokens (e.g., long system instructions or grounding docs) reused across many calls, cutting latency and cost?",
+    "options": [
+      "Context caching",
+      "Increasing temperature",
+      "Adding more replicas",
+      "Larger batch size"
+    ],
+    "correct_index": 0,
+    "explanation": "Context caching stores reusable prefix tokens server-side, reducing per-call cost and latency. Sampling and infra knobs don't address repeated-prefix reuse.",
+    "doc_links": [
+      {
+        "title": "Context caching",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.1-002",
+    "exam": "genai",
+    "section": "GENAI-4.1",
+    "difficulty": "easy",
+    "text": "Which is a typical FIRST step when an enterprise plans to implement transformational gen AI?",
+    "options": [
+      "Identify high-value use cases aligned to business outcomes and assess readiness (data, skills, governance)",
+      "Train a foundation model from scratch in-house on customer data using a freshly purchased TPU pod, before any use case is defined",
+      "Announce a workforce reduction plan to replace customer-facing employees with chatbots before any pilot has been validated",
+      "Place a large bulk-purchase order for GPU hardware in a colocation facility before any deployment architecture is in place"
+    ],
+    "correct_index": 0,
+    "explanation": "Use-case identification + readiness assessment is the standard first step. Training from scratch, headcount replacement, and unplanned hardware spend are not transformational starting points.",
+    "doc_links": [
+      {
+        "title": "Generative AI for the enterprise",
+        "url": "https://cloud.google.com/transform/gen-ai-101-for-enterprise"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.1-003",
+    "exam": "genai",
+    "section": "GENAI-4.1",
+    "difficulty": "easy",
+    "text": "Which leadership artifact helps prioritize gen AI investments by business impact and feasibility?",
+    "options": [
+      "A use-case portfolio with impact x feasibility scoring",
+      "A free-form Slack channel where business and engineering leaders post candidate ideas and react with emojis to signal interest",
+      "A consolidated list of accumulated technical debt items maintained by the platform team for the next refactoring cycle",
+      "A single vendor RFP issued to gen AI platform providers with the expectation that the winning vendor will define the roadmap"
+    ],
+    "correct_index": 0,
+    "explanation": "Portfolio scoring (impact x feasibility) is the standard prioritization artifact. Opinions, debt lists, and RFPs are not the prioritization framework.",
+    "doc_links": [
+      {
+        "title": "Gen AI strategy",
+        "url": "https://cloud.google.com/blog/topics/digital-transformation/how-leaders-can-make-gen-ai-deliver-business-value"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.1-004",
+    "exam": "genai",
+    "section": "GENAI-4.1",
+    "difficulty": "easy",
+    "text": "Which Google Cloud asset helps an enterprise quickly try gen AI on its own data with managed infrastructure and security defaults?",
+    "options": [
+      "Vertex AI (with grounding to enterprise data)",
+      "Cloud DNS, Google's managed authoritative DNS service for publishing public and private DNS zones at global scale",
+      "Cloud Tasks, the asynchronous task-queue service for dispatching HTTP and App Engine work with retries and rate limits",
+      "Memorystore for Redis, the managed in-memory data store used as a low-latency cache for application session and lookup data"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI with grounding lets an enterprise pilot quickly with managed infra and security. The others aren't gen AI platforms.",
+    "doc_links": [
+      {
+        "title": "Vertex AI overview",
+        "url": "https://cloud.google.com/vertex-ai/docs"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.1-005",
+    "exam": "genai",
+    "section": "GENAI-4.1",
+    "difficulty": "medium",
+    "text": "Which organizational capability is MOST important to scale gen AI from pilots to production across business units?",
+    "options": [
+      "An AI Center of Excellence (AI CoE) with platform team, MLOps, governance, and reusable patterns",
+      "Per-team isolated experiments running in their own Google Cloud projects with no shared platform, reference patterns, or central governance",
+      "A continuously-updated spreadsheet of approved gen AI vendors and SaaS tools that each business unit can pick from for its pilots",
+      "Rotating the CTO each quarter so the gen AI strategy keeps pace with the rapid shifts in the public foundation-model landscape"
+    ],
+    "correct_index": 0,
+    "explanation": "An AI CoE with shared platform, MLOps, governance, and patterns is the standard scale enabler. Isolated experiments don't scale; vendor lists and exec churn don't address capability.",
+    "doc_links": [
+      {
+        "title": "Cloud Adoption Framework",
+        "url": "https://cloud.google.com/adoption-framework"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.1-006",
+    "exam": "genai",
+    "section": "GENAI-4.1",
+    "difficulty": "medium",
+    "text": "Which metric category BEST captures the value delivered by a customer-support gen AI deployment?",
+    "options": [
+      "Tokens consumed only",
+      "Outcome KPIs: deflection rate, average handle time, CSAT, first-contact resolution \u2014 alongside cost & quality guardrails",
+      "Lines of code shipped",
+      "Number of meetings held"
+    ],
+    "correct_index": 1,
+    "explanation": "Outcome KPIs (deflection, AHT, CSAT, FCR) tie gen AI investment to business value. Token spend, lines of code, or meetings don't measure outcomes.",
+    "doc_links": [
+      {
+        "title": "Gen AI value measurement",
+        "url": "https://cloud.google.com/transform/gen-ai-101-for-enterprise"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.1-007",
+    "exam": "genai",
+    "section": "GENAI-4.1",
+    "difficulty": "hard",
+    "text": "An enterprise wants to embed gen AI across many business processes without creating dozens of disconnected solutions. Which approach is MOST aligned with Google's guidance?",
+    "options": [
+      "Allow each team to pick a different vendor stack with no shared platform",
+      "Establish a shared AI platform (Vertex AI), shared agent / RAG patterns, shared governance & evaluation, and reusable data/tooling \u2014 then enable business units on top",
+      "Mandate a single agent for the entire company regardless of fit",
+      "Buy a perpetual license to one model and never change"
+    ],
+    "correct_index": 1,
+    "explanation": "Shared platform + reusable patterns + governance lets many teams ship without fragmentation. Per-team vendor sprawl, single-agent mandates, and lock-in licenses miss the balance.",
+    "doc_links": [
+      {
+        "title": "Adoption Framework",
+        "url": "https://cloud.google.com/adoption-framework"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.1-008",
+    "exam": "genai",
+    "section": "GENAI-4.1",
+    "difficulty": "hard",
+    "text": "An organization wants to drive cultural change to adopt gen AI safely. Which combination of investments is MOST effective?",
+    "options": [
+      "Mandate gen AI tool usage across the org without dedicated training, role-based enablement, or change-management communications",
+      "Executive sponsorship + role-based enablement + responsible-AI policies + visible quick wins + change-management communications",
+      "Ban gen AI usage organization-wide to avoid responsible-AI risk until the technology and the regulatory landscape stabilize",
+      "Outsource all generative AI strategy and tooling decisions to a single external vendor and adopt their reference architecture"
+    ],
+    "correct_index": 1,
+    "explanation": "Sponsorship + enablement + responsible-AI policy + quick wins + change management is the standard transformation playbook. The other options either force adoption without skills, suppress innovation, or abdicate strategy.",
+    "doc_links": [
+      {
+        "title": "Cloud Adoption Framework",
+        "url": "https://cloud.google.com/adoption-framework"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.1-009",
+    "exam": "genai",
+    "section": "GENAI-4.1",
+    "difficulty": "hard",
+    "text": "An enterprise must justify continued gen AI investment to its board. Which measurement framework is MOST defensible?",
+    "options": [
+      "Collect anecdotal feedback from engineering teams during quarterly business reviews and present it to the board",
+      "Measure baseline + post-deployment business KPIs (revenue, cost-to-serve, NPS, time-to-market) via controlled experiments, paired with quality and risk metrics",
+      "Track only Vertex AI input/output token counts month-over-month as the primary indicator of value generation",
+      "Cite analyst reports and competitor press releases that quantify generative AI ROI in similar industries"
+    ],
+    "correct_index": 1,
+    "explanation": "Baselines + KPI measurement + controlled experiments + risk/quality metrics provide a defensible board-level case. Anecdotes, token counts, and marketing aren't a measurement framework.",
+    "doc_links": [
+      {
+        "title": "Measuring gen AI value",
+        "url": "https://cloud.google.com/transform/gen-ai-101-for-enterprise"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.2-003",
+    "exam": "genai",
+    "section": "GENAI-4.2",
+    "difficulty": "easy",
+    "text": "What does SAIF stand for in Google's responsible AI guidance?",
+    "options": [
+      "Secure AI Framework",
+      "Standard Artificial Inference Format",
+      "Safe Accelerated Indexing Framework",
+      "Service Account Identity Federation"
+    ],
+    "correct_index": 0,
+    "explanation": "SAIF is Google's Secure AI Framework. The other expansions are not standard.",
+    "doc_links": [
+      {
+        "title": "Secure AI Framework",
+        "url": "https://safety.google/cybersecurity-advancements/saif/"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.2-004",
+    "exam": "genai",
+    "section": "GENAI-4.2",
+    "difficulty": "easy",
+    "text": "Which of the following is a typical AI-specific risk that SAIF aims to address?",
+    "options": [
+      "Prompt injection / model misuse",
+      "DNS misconfiguration",
+      "Tape-backup corruption",
+      "Mouse-click latency"
+    ],
+    "correct_index": 0,
+    "explanation": "Prompt injection and model misuse are central AI-specific risks SAIF addresses. The others aren't AI-specific risks.",
+    "doc_links": [
+      {
+        "title": "SAIF risks",
+        "url": "https://safety.google/cybersecurity-advancements/saif/"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.2-005",
+    "exam": "genai",
+    "section": "GENAI-4.2",
+    "difficulty": "medium",
+    "text": "Which Vertex AI feature filters generations for harmful categories (hate, harassment, sexually explicit, dangerous)?",
+    "options": [
+      "Safety filters / safety attributes on Gemini",
+      "VPC Service Controls",
+      "Cloud KMS",
+      "Cloud DNS"
+    ],
+    "correct_index": 0,
+    "explanation": "Gemini exposes configurable safety filters and safety attributes. VPC-SC, KMS, and DNS address other security domains.",
+    "doc_links": [
+      {
+        "title": "Configuring safety attributes",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/configure-safety-attributes"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.2-006",
+    "exam": "genai",
+    "section": "GENAI-4.2",
+    "difficulty": "medium",
+    "text": "Which mitigation BEST defends a chatbot against prompt-injection in retrieved web content?",
+    "options": [
+      "Trust all retrieved content as authoritative instructions",
+      "Treat retrieved content as data (not instructions), apply input/output filtering, segregate system instructions, and constrain tool use with strict allow-lists",
+      "Disable retrieval entirely",
+      "Increase temperature"
+    ],
+    "correct_index": 1,
+    "explanation": "Treating retrieved content as data, filtering, isolating system prompts, and constraining tools are the canonical injection mitigations. Trusting content, removing retrieval, or tweaking temperature don't defend.",
+    "doc_links": [
+      {
+        "title": "SAIF \u2014 prompt injection",
+        "url": "https://safety.google/cybersecurity-advancements/saif/"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.2-007",
+    "exam": "genai",
+    "section": "GENAI-4.2",
+    "difficulty": "medium",
+    "text": "Which of the following BEST applies SAIF to data used for fine-tuning?",
+    "options": [
+      "Skip data review",
+      "Sanitize and de-identify training data, control provenance, scan for prompt-injection / poisoning, and apply access controls",
+      "Train on whatever the team has handy",
+      "Disable IAM during training"
+    ],
+    "correct_index": 1,
+    "explanation": "SAIF emphasizes provenance, sanitization, and access control on training data. The other options skip the controls SAIF recommends.",
+    "doc_links": [
+      {
+        "title": "SAIF",
+        "url": "https://safety.google/cybersecurity-advancements/saif/"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.2-008",
+    "exam": "genai",
+    "section": "GENAI-4.2",
+    "difficulty": "hard",
+    "text": "An enterprise wants to detect and respond to abuse of its gen AI app (jailbreak attempts, exfiltration probes) at scale. Which combination fits BEST?",
+    "options": [
+      "Rely on Gemini's built-in safety filters alone and rotate API keys monthly to limit blast radius",
+      "Centralized prompt/response logging, Sensitive Data Protection scans for anomalies, Cloud Armor rate-limit and block rules, and SOC incident-response playbooks",
+      "Front the API with a single Cloud Load Balancer health check and email alerts for HTTP 500s only",
+      "Use Cloud IDS in detection-only mode and review the weekly digest report during the next sprint planning"
+    ],
+    "correct_index": 1,
+    "explanation": "Logging + anomaly detection + automated mitigation + SOC playbooks provide layered abuse defense per SAIF. The other options give attackers a free run.",
+    "doc_links": [
+      {
+        "title": "Cloud Armor",
+        "url": "https://cloud.google.com/armor/docs/cloud-armor-overview"
+      },
+      {
+        "title": "Sensitive Data Protection",
+        "url": "https://cloud.google.com/sensitive-data-protection/docs"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.2-009",
+    "exam": "genai",
+    "section": "GENAI-4.2",
+    "difficulty": "hard",
+    "text": "Which SAIF principle is MOST relevant to ensuring an organization can investigate, audit, and improve AI systems over time?",
+    "options": [
+      "'Fly blind' \u2014 don't log",
+      "Extend detection and response to AI systems with end-to-end logging, telemetry, and audit (and continuous improvement loops)",
+      "Disable observability",
+      "Outsource everything to a single vendor"
+    ],
+    "correct_index": 1,
+    "explanation": "SAIF explicitly calls for extending detection/response to AI with logging, telemetry, audit, and continuous improvement. The other options remove the necessary visibility.",
+    "doc_links": [
+      {
+        "title": "SAIF",
+        "url": "https://safety.google/cybersecurity-advancements/saif/"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.3-002",
+    "exam": "genai",
+    "section": "GENAI-4.3",
+    "difficulty": "easy",
+    "text": "Which document captures Google's high-level commitments for responsible AI development?",
+    "options": [
+      "Google's AI Principles",
+      "Google Workspace AUP",
+      "Cloud Run release notes",
+      "BigQuery pricing page"
+    ],
+    "correct_index": 0,
+    "explanation": "Google's AI Principles articulate the company's responsible-AI commitments. The others are unrelated documents.",
+    "doc_links": [
+      {
+        "title": "Google's AI Principles",
+        "url": "https://ai.google/responsibility/principles/"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.3-003",
+    "exam": "genai",
+    "section": "GENAI-4.3",
+    "difficulty": "easy",
+    "text": "Which responsible AI consideration ensures users know they are interacting with an AI system?",
+    "options": [
+      "Transparency / disclosure",
+      "Caching",
+      "Sharding",
+      "Quantization"
+    ],
+    "correct_index": 0,
+    "explanation": "Transparency/disclosure is the responsible-AI principle requiring users be informed when AI is in use. The others are technical optimizations.",
+    "doc_links": [
+      {
+        "title": "Responsible AI",
+        "url": "https://cloud.google.com/responsible-ai"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.3-004",
+    "exam": "genai",
+    "section": "GENAI-4.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud feature lets you control safety thresholds in Gemini outputs across categories like hate, harassment, sexually explicit, and dangerous content?",
+    "options": [
+      "Gemini configurable safety attributes",
+      "VPC Service Controls",
+      "Cloud DNS policies",
+      "Cloud KMS keys"
+    ],
+    "correct_index": 0,
+    "explanation": "Configurable safety attributes adjust thresholds across the standard harm categories. The others address other security domains.",
+    "doc_links": [
+      {
+        "title": "Configuring safety attributes",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/configure-safety-attributes"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.3-005",
+    "exam": "genai",
+    "section": "GENAI-4.3",
+    "difficulty": "medium",
+    "text": "An organization is deploying a gen AI app that influences hiring decisions. Per Google's responsible AI guidance, which control is MOST important?",
+    "options": [
+      "Use the model fully autonomously to ensure consistency",
+      "Bias/fairness evaluation, human-in-the-loop on candidate decisions, transparency to candidates, and ongoing monitoring for disparate impact",
+      "Hide AI involvement",
+      "Train on resumes only with no review"
+    ],
+    "correct_index": 1,
+    "explanation": "High-impact decisions require fairness evaluation, HITL, transparency, and monitoring. The other options violate fairness, transparency, or due-diligence principles.",
+    "doc_links": [
+      {
+        "title": "Google's AI Principles",
+        "url": "https://ai.google/responsibility/principles/"
+      },
+      {
+        "title": "Responsible AI on Google Cloud",
+        "url": "https://cloud.google.com/responsible-ai"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.3-006",
+    "exam": "genai",
+    "section": "GENAI-4.3",
+    "difficulty": "medium",
+    "text": "Which Google capability watermarks AI-generated images so they can later be detected as such?",
+    "options": [
+      "SynthID",
+      "Cloud Armor",
+      "Cloud DNS",
+      "BigQuery DTS"
+    ],
+    "correct_index": 0,
+    "explanation": "SynthID embeds an imperceptible watermark in AI-generated content for later detection. The other services are unrelated.",
+    "doc_links": [
+      {
+        "title": "SynthID",
+        "url": "https://deepmind.google/technologies/synthid/"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.3-007",
+    "exam": "genai",
+    "section": "GENAI-4.3",
+    "difficulty": "hard",
+    "text": "Which combination BEST operationalizes responsible AI inside an enterprise software development life cycle?",
+    "options": [
+      "Conduct ad-hoc responsible-AI reviews after launch when the legal or PR team flags a specific incident in production",
+      "AI risk reviews at design, automated bias/safety eval in CI, model and data cards, change-management for prompts, and post-deploy monitoring with feedback loops",
+      "Skip pre-launch evaluation entirely so the team can ship faster and address responsible-AI concerns in a follow-up release",
+      "Disable safety filters in production so end users see unfiltered model output and the team can collect realistic failure data"
+    ],
+    "correct_index": 1,
+    "explanation": "Embedding RAI into design reviews, CI evals, model/data cards, change management, and monitoring is the canonical operating model. Ad-hoc/skipped reviews and disabled safety violate principles.",
+    "doc_links": [
+      {
+        "title": "Responsible AI practices",
+        "url": "https://ai.google/responsibility/responsible-ai-practices/"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.3-008",
+    "exam": "genai",
+    "section": "GENAI-4.3",
+    "difficulty": "hard",
+    "text": "An enterprise wants to allow employees to use Gemini for productivity but prevent leakage of sensitive data into prompts. Which controls are MOST aligned with responsible AI?",
+    "options": [
+      "Trust all employees to handle sensitive data appropriately without controls",
+      "Workspace admin policies + DLP-based scanning of prompts/responses + acceptable-use training + audit logging + role-based access to enterprise gen AI tools",
+      "Disable Gemini company-wide",
+      "Encourage employees to use personal accounts"
+    ],
+    "correct_index": 1,
+    "explanation": "Admin policy + DLP + training + audit + RBAC together implement responsible enterprise use. Trusting alone, disabling, or personal-account workarounds either fail or violate policy.",
+    "doc_links": [
+      {
+        "title": "Workspace admin help",
+        "url": "https://gemini.google/overview/"
+      },
+      {
+        "title": "Sensitive Data Protection",
+        "url": "https://cloud.google.com/sensitive-data-protection/docs"
+      }
+    ]
+  },
+  {
+    "id": "genai-4.3-009",
+    "exam": "genai",
+    "section": "GENAI-4.3",
+    "difficulty": "hard",
+    "text": "Which Google practice helps customers understand how a Vertex AI managed model was built and intended to be used?",
+    "options": [
+      "Model cards / data cards documenting intended use, limitations, evaluation, and risks",
+      "Hidden internal documents only",
+      "Marketing slides only",
+      "Anecdotal user reviews"
+    ],
+    "correct_index": 0,
+    "explanation": "Model cards and data cards document intended use, limitations, and evaluation \u2014 a core responsible-AI transparency artifact. The other choices don't provide the same documented transparency.",
+    "doc_links": [
+      {
+        "title": "Model cards",
+        "url": "https://modelcards.withgoogle.com/about"
+      },
+      {
+        "title": "Responsible AI",
+        "url": "https://cloud.google.com/responsible-ai"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.1-004",
+    "exam": "genai",
+    "section": "GENAI-1.1",
+    "difficulty": "easy",
+    "text": "Which neural-network architecture underpins modern large language models such as Gemini, GPT, and Llama?",
+    "options": [
+      "Convolutional neural network (CNN) with pooling layers",
+      "Recurrent neural network (LSTM) with gated cells",
+      "Transformer architecture using self-attention",
+      "Decision tree ensemble (random forest)"
+    ],
+    "correct_index": 2,
+    "explanation": "Modern LLMs are built on the transformer architecture, whose self-attention mechanism enables parallel processing of long sequences. CNNs are for vision, LSTMs are largely superseded for language, and decision trees are not neural networks.",
+    "doc_links": [
+      {
+        "title": "Transformer (Google Research)",
+        "url": "https://research.google/blog/transformer-a-novel-neural-network-architecture-for-language-understanding/"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.1-005",
+    "exam": "genai",
+    "section": "GENAI-1.1",
+    "difficulty": "easy",
+    "text": "A model that can accept text, images, audio, and video as input is BEST described as which kind of model?",
+    "options": [
+      "Single-modality model",
+      "Multimodal model",
+      "Symbolic reasoning model",
+      "Tabular classification model"
+    ],
+    "correct_index": 1,
+    "explanation": "A multimodal model handles multiple input/output modalities (text, image, audio, video) — Gemini is the canonical Google example. Single-modality handles one type; the others are not multimodal categories.",
+    "doc_links": [
+      {
+        "title": "Gemini multimodal capabilities",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/overview"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.1-006",
+    "exam": "genai",
+    "section": "GENAI-1.1",
+    "difficulty": "medium",
+    "text": "When estimating cost and context-window usage for an LLM call, which unit are most generative AI APIs (including Vertex AI Gemini) billed and limited by?",
+    "options": [
+      "Characters of input plus output text",
+      "Number of API calls regardless of payload size",
+      "Tokens (sub-word units) in the input plus the generated output",
+      "Bytes of network egress only"
+    ],
+    "correct_index": 2,
+    "explanation": "LLM pricing and context limits are denominated in tokens (sub-word pieces), counted across both input and output. Characters, call counts, and egress bytes don't match how foundation-model APIs meter usage.",
+    "doc_links": [
+      {
+        "title": "Vertex AI generative AI pricing",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/pricing"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.1-007",
+    "exam": "genai",
+    "section": "GENAI-1.1",
+    "difficulty": "medium",
+    "text": "A team has a base foundation model and wants to specialize it for a domain (legal contracts) using a small labeled dataset. Which phase of the model lifecycle does this represent?",
+    "options": [
+      "Pre-training the model from scratch on the open web",
+      "Fine-tuning (or supervised tuning) the pre-trained model on domain data",
+      "Tokenization of the input text",
+      "Sharding the inference traffic across regions"
+    ],
+    "correct_index": 1,
+    "explanation": "Adapting a pre-trained model to a domain with labeled data is fine-tuning / supervised tuning. Pre-training is the much larger initial step on broad data; tokenization and sharding are unrelated to specialization.",
+    "doc_links": [
+      {
+        "title": "Tune Gemini models",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/models/tune-models"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.1-008",
+    "exam": "genai",
+    "section": "GENAI-1.1",
+    "difficulty": "hard",
+    "text": "Two foundation models have similar benchmark scores, but model A has a 32k-token context window and model B has a 1M-token context window. For which workload does model B's larger context window provide the BIGGEST architectural advantage?",
+    "options": [
+      "Single-sentence sentiment classification of customer reviews",
+      "Summarizing a single 500-page contract in one pass without chunking and retrieval glue code",
+      "Generating short product titles from a SKU code",
+      "Translating one paragraph between two languages"
+    ],
+    "correct_index": 1,
+    "explanation": "Long-context models shine when the entire source must be reasoned over jointly (e.g., a 500-page contract); chunking/RAG can be avoided. Short-input tasks gain little from a 1M context window.",
+    "doc_links": [
+      {
+        "title": "Gemini long context",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/long-context"
+      }
+    ]
+  },
+  {
+    "id": "genai-1.1-009",
+    "exam": "genai",
+    "section": "GENAI-1.1",
+    "difficulty": "hard",
+    "text": "A leader is comparing a 1B-parameter model and a 70B-parameter model from the same family. Which trade-off is MOST accurate to communicate to stakeholders?",
+    "options": [
+      "Larger models are always cheaper to serve and always more accurate on every task",
+      "Smaller models are always more accurate because they overfit less",
+      "Larger models tend to be more capable on complex reasoning but cost more per token and have higher latency; smaller models are cheaper and faster and may suffice for narrower tasks",
+      "Parameter count has no effect on capability, cost, or latency"
+    ],
+    "correct_index": 2,
+    "explanation": "Bigger models generally improve on hard reasoning at higher cost and latency; smaller models often satisfy narrower tasks at lower cost. The other statements ignore the documented capability/cost/latency trade-off.",
+    "doc_links": [
+      {
+        "title": "Choose a model (Vertex AI)",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models"
+      }
+    ]
+  },
+  {
+    "id": "genai-2.4-010",
+    "exam": "genai",
+    "section": "GENAI-2.4",
+    "difficulty": "medium",
+    "text": "A developer wants a single Vertex AI catalog from which to browse, deploy, and call Google first-party (Gemini), open-source (Llama, Gemma), and partner foundation models. Which Vertex AI surface fits BEST?",
+    "options": [
+      "Vertex AI Model Garden",
+      "BigQuery Data Transfer Service",
+      "Cloud Build triggers",
+      "Cloud Storage buckets"
+    ],
+    "correct_index": 0,
+    "explanation": "Model Garden is the curated catalog of first-party, open, and partner foundation models in Vertex AI. The other services address ETL, CI builds, and object storage respectively.",
+    "doc_links": [
+      {
+        "title": "Vertex AI Model Garden",
+        "url": "https://cloud.google.com/model-garden"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.2-004",
+    "exam": "genai",
+    "section": "GENAI-3.2",
+    "difficulty": "easy",
+    "text": "A user types a single instruction such as 'Translate this sentence to French' with no examples. Which prompting technique is this?",
+    "options": [
+      "Few-shot prompting",
+      "Zero-shot prompting",
+      "Chain-of-thought prompting",
+      "ReAct prompting"
+    ],
+    "correct_index": 1,
+    "explanation": "An instruction with zero supplied examples is the definition of zero-shot prompting. Few-shot adds examples; chain-of-thought elicits stepwise reasoning; ReAct interleaves reasoning with tool calls.",
+    "doc_links": [
+      {
+        "title": "Prompt design strategies",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.2-005",
+    "exam": "genai",
+    "section": "GENAI-3.2",
+    "difficulty": "easy",
+    "text": "Which Gemini API field lets a developer set persistent role and behavior guidance (e.g., 'You are a concise SRE tutor') that applies across all turns of a conversation?",
+    "options": [
+      "System instructions",
+      "Stop sequences",
+      "Top-p sampling",
+      "Maximum output tokens"
+    ],
+    "correct_index": 0,
+    "explanation": "System instructions hold persistent role/behavior guidance for the model. Stop sequences end generation, top-p controls sampling, and max output tokens caps response length — none set persona.",
+    "doc_links": [
+      {
+        "title": "Gemini system instructions",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/system-instructions"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.2-006",
+    "exam": "genai",
+    "section": "GENAI-3.2",
+    "difficulty": "medium",
+    "text": "An app needs Gemini to return strictly valid JSON matching a fixed schema so downstream code can parse it without retries. Which Vertex AI feature is the BEST fit?",
+    "options": [
+      "Set the response MIME type to application/json and provide a response schema (controlled / structured output)",
+      "Lower the temperature to 0 and hope the model emits JSON",
+      "Wrap the prompt in many examples and parse with regex",
+      "Disable safety filters to free up the output"
+    ],
+    "correct_index": 0,
+    "explanation": "Vertex AI supports controlled generation via response_mime_type=application/json plus a response_schema, guaranteeing schema-conformant JSON. Temperature/regex are best-effort; safety filters are unrelated to JSON validity.",
+    "doc_links": [
+      {
+        "title": "Control generated output",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/control-generated-output"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.2-007",
+    "exam": "genai",
+    "section": "GENAI-3.2",
+    "difficulty": "medium",
+    "text": "A developer wants more deterministic, factual answers from Gemini for a knowledge-base assistant. Which sampling parameter change is MOST appropriate?",
+    "options": [
+      "Increase temperature toward 1.0 to encourage diverse output",
+      "Lower temperature toward 0 (and lower top-p) to reduce randomness",
+      "Set max output tokens to 1 to force short answers",
+      "Add many random stop sequences to truncate the answer"
+    ],
+    "correct_index": 1,
+    "explanation": "Lower temperature (and tighter top-p) reduces sampling randomness, favoring the highest-probability tokens — the documented lever for more deterministic output. Higher temperature increases creativity; the other options harm answer quality.",
+    "doc_links": [
+      {
+        "title": "Model parameters (Vertex AI)",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/inference"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.2-008",
+    "exam": "genai",
+    "section": "GENAI-3.2",
+    "difficulty": "hard",
+    "text": "An LLM-powered support agent processes user-supplied text that may contain instructions trying to override the system prompt (prompt injection). Which combination of mitigations is MOST aligned with Google's responsible AI / SAIF guidance?",
+    "options": [
+      "Trust user input verbatim and rely on the model to refuse",
+      "Use system instructions plus input/output validation, separate untrusted user content from trusted instructions, restrict tool/function-call permissions, and apply safety filters and human review for sensitive actions",
+      "Disable safety filters and let the model decide",
+      "Log nothing so attackers can't learn the system prompt"
+    ],
+    "correct_index": 1,
+    "explanation": "Defense-in-depth — system instructions, input/output validation, separation of trusted/untrusted content, least-privilege tool access, safety filters, and human review — aligns with SAIF and Vertex AI guidance. The other options weaken or remove controls.",
+    "doc_links": [
+      {
+        "title": "Secure AI Framework (SAIF)",
+        "url": "https://safety.google/cybersecurity-advancements/saif/"
+      },
+      {
+        "title": "Responsible AI safety filters",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/configure-safety-attributes"
+      }
+    ]
+  },
+  {
+    "id": "genai-3.2-009",
+    "exam": "genai",
+    "section": "GENAI-3.2",
+    "difficulty": "hard",
+    "text": "A complex math word problem still gets wrong answers even with chain-of-thought prompting. Which advanced prompting strategy aggregates multiple reasoning paths to improve final accuracy?",
+    "options": [
+      "Self-consistency: sample several chain-of-thought reasoning paths and take the majority answer",
+      "Set temperature to 0 once and accept the single deterministic output as the model's best answer for the math word problem",
+      "Remove the chain-of-thought hint from the prompt to shorten the answer and rely on the model's direct first-pass arithmetic skill",
+      "Switch to a smaller model with fewer parameters to reduce confusion from the larger model's longer and more verbose reasoning"
+    ],
+    "correct_index": 0,
+    "explanation": "Self-consistency samples multiple reasoning chains and picks the majority answer, improving accuracy on multi-step reasoning beyond a single chain-of-thought. The other options either reduce diversity or hurt capability.",
+    "doc_links": [
+      {
+        "title": "Advanced prompt strategies",
+        "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies"
+      },
+      {
+        "title": "Self-consistency paper",
+        "url": "https://arxiv.org/abs/2203.11171"
       }
     ]
   }

@@ -137,7 +137,7 @@
     "doc_links": [
       {
         "title": "GKE Autopilot security capabilities (privileged disallowed)",
-        "url": "https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-security-capabilities"
+        "url": "https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview"
       },
       {
         "title": "GPUs on GKE",
@@ -407,10 +407,10 @@
     "difficulty": "hard",
     "text": "An on-prem data center connects to a GCP VPC via two 10 Gbps Dedicated Interconnects in different metro facilities. Requirements: (1) 99.99% SLA for production traffic; (2) failover MUST be automatic with sub-minute convergence; (3) routing must prefer the lower-latency link; (4) plan must survive a full metro outage. Which design is BEST?",
     "options": [
-      "Both Interconnects in the same metro for simpler ops; static routes; manual failover",
-      "Two Interconnects in separate metros, each on its own Cloud Router; BGP with MED to prefer the lower-latency path; redundant edge devices on the customer side; HA VPN as warm backup",
-      "A single 100 Gbps Dedicated Interconnect with no backup",
-      "Cloud NAT plus a public IP, relying on the public internet"
+      "Place both 10 Gbps Dedicated Interconnects in the same metro for simpler operations, with static routes and manual failover via runbooks",
+      "Two Interconnects in separate metros, each on its own Cloud Router with BGP MED to prefer the lower-latency path, and HA VPN as warm backup",
+      "Provision a single 100 Gbps Dedicated Interconnect attachment in the primary metro and rely on Google's network to absorb local incidents",
+      "Use Cloud NAT plus an external IP and route hybrid traffic across the public internet with QoS marking on the on-prem edge devices"
     ],
     "correct_index": 1,
     "explanation": "The 99.99% Dedicated Interconnect topology requires links in two separate metros, each on its own Cloud Router, with BGP for sub-minute convergence and MED to express path preference. HA VPN as warm backup is a recommended belt-and-suspenders pattern. Same-metro defeats the SLA; single link has no redundancy; Cloud NAT is for outbound public traffic.",
@@ -595,10 +595,10 @@
     "difficulty": "medium",
     "text": "An application stores millions of small thumbnails. Reads are heavy in the first 30 days, then drop to <1/month, but objects must remain instantly available for 5 years. Which configuration minimizes lifetime cost?",
     "options": [
-      "Standard storage forever",
+      "Keep every thumbnail in Standard storage class for the entire 5-year retention period regardless of age or observed access pattern",
       "Standard for 30 days; lifecycle rule transitioning to Nearline at 30 days, Coldline at 90, Archive at 365",
-      "Archive storage from day 1",
-      "Move objects to Bigtable after 30 days"
+      "Provision Archive storage class from day 1 to maximize at-rest savings and accept the per-access retrieval cost on every read",
+      "Move objects to Cloud Bigtable as binary cell values after 30 days and serve reads from Bigtable for the remaining 5-year window"
     ],
     "correct_index": 1,
     "explanation": "Object Lifecycle Management age-based class transitions match the access-frequency curve. Archive from day 1 incurs heavy retrieval cost during the hot first 30 days. Bigtable is a NoSQL DB, not blob storage. Standard forever is the most expensive long-tail option.",
@@ -641,10 +641,10 @@
     "difficulty": "easy",
     "text": "Which Google Cloud IAM principle should be the default when granting access to a service account?",
     "options": [
-      "Grant Owner role for simplicity",
+      "Grant the basic Owner role on the project so the workload has access to anything it might need today or in the future",
       "Grant only the predefined or custom role(s) the workload needs (least privilege)",
-      "Grant `roles/editor` to every workload",
-      "Grant the AWS Administrator policy"
+      "Grant roles/editor to every workload service account so all teams use the same standard role across every environment",
+      "Grant the AWS Administrator IAM policy that mirrors the workload's existing entitlements in the source cloud account"
     ],
     "correct_index": 1,
     "explanation": "Least privilege is the IAM foundation: bind only the roles required for the workload. Owner/Editor grant far more than needed; the AWS option is not a GCP concept.",
@@ -915,7 +915,7 @@
     "doc_links": [
       {
         "title": "Streaming pipelines on Google Cloud",
-        "url": "https://cloud.google.com/architecture/streaming-pipelines"
+        "url": "https://cloud.google.com/architecture/data-pipelines"
       }
     ]
   },
@@ -1072,10 +1072,10 @@
     "difficulty": "easy",
     "text": "Which Google Cloud product is the simplest fit for an event-driven function that runs in response to a new file landing in Cloud Storage?",
     "options": [
-      "Compute Engine VM with a polling cron",
+      "A Compute Engine VM running a cron job every minute that lists the bucket via the API and processes any newly added objects",
       "Cloud Run function (Cloud Functions) triggered by the GCS finalize event",
-      "GKE DaemonSet polling the bucket",
-      "AWS Lambda with an S3 trigger"
+      "A GKE DaemonSet on every node that polls the bucket on a fixed interval and dispatches work to in-cluster worker pods",
+      "AWS Lambda with an S3 event trigger reading from a mirrored S3 bucket synchronized from the Cloud Storage source bucket"
     ],
     "correct_index": 1,
     "explanation": "Cloud Functions / Cloud Run functions natively support GCS finalize event triggers via Eventarc \u2014 no polling, no cluster, no servers. The other options either poll or are non-GCP.",
@@ -1220,7 +1220,7 @@
     "doc_links": [
       {
         "title": "Reliable operations (Architecture Framework)",
-        "url": "https://cloud.google.com/architecture/framework/reliability/operations"
+        "url": "https://cloud.google.com/architecture/framework/reliability"
       }
     ]
   },
@@ -1232,9 +1232,9 @@
     "text": "Per Architecture Framework operational excellence, which practice should be in place BEFORE a service handles production traffic?",
     "options": [
       "Defined SLIs/SLOs, runbooks for the top failure modes, and a tested rollback path",
-      "Only a status-page page",
-      "Only a postmortem template",
-      "Manual deploys reviewed by an architect each time"
+      "A public status page wired to the on-call rotation, with no formal SLOs, runbooks, or rollback procedure documented yet",
+      "A blank postmortem template stored in the team wiki, to be filled in if and when the first production incident occurs",
+      "A policy that every production deploy be reviewed and approved by an architect manually each time a change is shipped"
     ],
     "correct_index": 0,
     "explanation": "The framework's pre-prod readiness checklist centers on measurable SLIs/SLOs, runbooks, and rollback. Templates and manual reviews don't substitute for instrumentation and reversibility.",
@@ -1267,6 +1267,2369 @@
       {
         "title": "Spot VMs",
         "url": "https://cloud.google.com/compute/docs/instances/spot"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.1-004",
+    "exam": "architect",
+    "section": "PCA-1.1",
+    "difficulty": "easy",
+    "text": "An auditor asks where to find a single, signed report describing the scope and findings of Google Cloud's most recent SOC 2 Type II audit so the company can attach it to its own compliance package. What should the architect direct them to?",
+    "options": [
+      "The Google Cloud Status Dashboard",
+      "Compliance Reports Manager in the Trust and Security center",
+      "Cloud Audit Logs exported to BigQuery",
+      "The customer's Access Transparency log bucket"
+    ],
+    "correct_index": 1,
+    "explanation": "Compliance Reports Manager is where Google publishes signed third-party audit reports (SOC, ISO, PCI, etc.) for customers to download. The status dashboard reports outages, Audit Logs record API calls, and Access Transparency records Google-staff access \u2014 none deliver third-party attestations.",
+    "doc_links": [
+      {
+        "title": "Compliance Reports Manager",
+        "url": "https://cloud.google.com/security/compliance/compliance-reports-manager"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.1-005",
+    "exam": "architect",
+    "section": "PCA-1.1",
+    "difficulty": "easy",
+    "text": "A team needs to back up Compute Engine persistent disks daily and retain copies in another region with no manual scripting. Which built-in feature satisfies this?",
+    "options": [
+      "Cloud Storage Transfer Service jobs reading the disks",
+      "A snapshot schedule attached to the disks with a multi-region storage location",
+      "Filestore backups copied with rsync",
+      "Persistent Disk Async Replication only"
+    ],
+    "correct_index": 1,
+    "explanation": "Snapshot schedules are the managed daily-backup mechanism for PDs and accept a multi-region storage location for cross-region durability. Storage Transfer Service does not back up PDs directly, Filestore is a different service, and PD Async Replication is for low-RPO DR (block-level continuous replication) rather than scheduled backups with retention.",
+    "doc_links": [
+      {
+        "title": "Snapshot schedules",
+        "url": "https://cloud.google.com/compute/docs/disks/scheduled-snapshots"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.1-006",
+    "exam": "architect",
+    "section": "PCA-1.1",
+    "difficulty": "medium",
+    "text": "A US healthcare ISV wants to offer its SaaS to EU customers, who require that PHI never leave the EU and that Google personnel access requests be visible to the customer. Which two-control combination is the MOST direct fit?",
+    "options": [
+      "Cloud KMS with software-protected keys plus IAM Conditions",
+      "Assured Workloads for EU regions plus Access Transparency with Access Approval",
+      "VPC Service Controls plus Cloud Logging exports to a US bucket",
+      "Organization Policy `iam.allowedPolicyMemberDomains` plus default at-rest encryption"
+    ],
+    "correct_index": 1,
+    "explanation": "Assured Workloads enforces EU data and personnel residency for the workload, and Access Transparency + Access Approval surface and gate Google-staff access. KMS+IAM Conditions and Org Policy do not enforce data-residency boundaries on their own, and exporting logs to a US bucket would itself violate the EU-only requirement.",
+    "doc_links": [
+      {
+        "title": "Assured Workloads",
+        "url": "https://cloud.google.com/assured-workloads/docs/overview"
+      },
+      {
+        "title": "Access Approval",
+        "url": "https://cloud.google.com/cloud-provider-access-management/access-approval/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.1-007",
+    "exam": "architect",
+    "section": "PCA-1.1",
+    "difficulty": "medium",
+    "text": "A retail platform must continue serving read traffic during a single-zone outage but can tolerate a brief read-only window for writes. Cost matters. Which Cloud SQL configuration BEST meets the requirement?",
+    "options": [
+      "Single-zone instance with on-demand backups",
+      "Regional (HA) Cloud SQL instance with automatic failover and a read replica in the same region",
+      "Two single-zone primaries replicating to each other with custom failover scripting",
+      "Cross-region read replica only, with manual promotion"
+    ],
+    "correct_index": 1,
+    "explanation": "A regional (HA) Cloud SQL instance synchronously replicates to a standby in another zone and fails over automatically, satisfying the zonal-outage requirement; an in-region read replica continues serving reads through the failover window. Self-managed dual primaries are unsupported and a cross-region replica alone has higher RPO and requires manual promotion.",
+    "doc_links": [
+      {
+        "title": "Cloud SQL high availability",
+        "url": "https://cloud.google.com/sql/docs/mysql/high-availability"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.1-008",
+    "exam": "architect",
+    "section": "PCA-1.1",
+    "difficulty": "hard",
+    "text": "A global SaaS provider needs an active/active relational store with strong consistency, RPO of zero across regions, and the ability to survive a regional failure with no data loss. Latency-sensitive writes are tolerated up to ~100 ms. Which configuration BEST fits?",
+    "options": [
+      "Cloud SQL for PostgreSQL HA in one region with cross-region read replicas",
+      "Spanner multi-region instance configuration (e.g. nam-eur-asia1)",
+      "AlloyDB for PostgreSQL with cross-region replicas and manual failover",
+      "Bigtable replicated cluster with multi-cluster routing"
+    ],
+    "correct_index": 1,
+    "explanation": "Spanner multi-region configurations provide synchronous, strongly-consistent replication across regions with RPO of zero and survive a regional outage transparently \u2014 the only option that meets active/active with strong consistency. Cloud SQL and AlloyDB cross-region replication is asynchronous (RPO > 0); Bigtable has eventual consistency and lacks SQL transactions across rows.",
+    "doc_links": [
+      {
+        "title": "Spanner instance configurations",
+        "url": "https://cloud.google.com/spanner/docs/instance-configurations"
+      },
+      {
+        "title": "Spanner replication",
+        "url": "https://cloud.google.com/spanner/docs/replication"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.1-009",
+    "exam": "architect",
+    "section": "PCA-1.1",
+    "difficulty": "hard",
+    "text": "A regulated insurer needs an immutable backup copy of GCS objects that cannot be deleted by an attacker who compromises an admin account, with a 7-year retention obligation. Which design satisfies the requirement with the LEAST operational overhead?",
+    "options": [
+      "Object Versioning enabled on the source bucket only",
+      "A separate target bucket with a Bucket Lock retention policy of 7 years and Object Versioning, populated by Storage Transfer Service",
+      "Daily exports to a Coldline bucket with IAM Conditions limiting deletes to one principal",
+      "Customer-managed encryption keys with rotation disabled"
+    ],
+    "correct_index": 1,
+    "explanation": "Bucket Lock makes a retention policy permanent: no principal \u2014 not even a project owner \u2014 can delete objects before the retention period expires, providing true immutability. Versioning alone, IAM Conditions, and CMEK rotation policies can all be undone by a sufficiently privileged compromised account.",
+    "doc_links": [
+      {
+        "title": "Bucket Lock",
+        "url": "https://cloud.google.com/storage/docs/bucket-lock"
+      },
+      {
+        "title": "Retention policies",
+        "url": "https://cloud.google.com/storage/docs/lifecycle"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.2-004",
+    "exam": "architect",
+    "section": "PCA-1.2",
+    "difficulty": "easy",
+    "text": "A team wants to deploy a stateless container that scales to zero between requests and bills only while requests are in flight. Which compute option fits BEST?",
+    "options": [
+      "Compute Engine MIG with min size 1",
+      "Cloud Run service",
+      "GKE Standard with a system pool of size 3",
+      "App Engine flexible environment"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Run scales containers from zero to N based on request load and bills request-driven CPU. A MIG with min=1 always runs at least one VM, GKE Standard requires running nodes, and App Engine flex keeps a minimum instance running.",
+    "doc_links": [
+      {
+        "title": "Cloud Run overview",
+        "url": "https://cloud.google.com/run/docs/overview/what-is-cloud-run"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.2-005",
+    "exam": "architect",
+    "section": "PCA-1.2",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service is the recommended starting point for a new event-driven function that runs in response to a Pub/Sub message and finishes in under a minute?",
+    "options": [
+      "Cloud Run functions (2nd gen)",
+      "GKE Autopilot deployment",
+      "Compute Engine startup script",
+      "Dataflow streaming job"
+    ],
+    "correct_index": 0,
+    "explanation": "Cloud Run functions (the rebranded Cloud Functions, 2nd gen, built on Cloud Run) are purpose-built for short-lived event-driven workloads triggered by Pub/Sub. GKE and Compute Engine require always-on infrastructure; Dataflow is for continuous data processing pipelines, not single-message handlers.",
+    "doc_links": [
+      {
+        "title": "Cloud Run functions",
+        "url": "https://cloud.google.com/functions/docs/concepts/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.2-006",
+    "exam": "architect",
+    "section": "PCA-1.2",
+    "difficulty": "medium",
+    "text": "A team is choosing between GKE Autopilot and GKE Standard for a new service. They want minimal node management, predictable per-pod billing, and want Google to enforce security best practices on the nodes. Which is the better fit and why?",
+    "options": [
+      "GKE Standard, because Autopilot does not support Horizontal Pod Autoscaling",
+      "GKE Autopilot, because Google manages and hardens the nodes and you pay per pod resource request",
+      "GKE Standard, because Autopilot lacks regional clusters",
+      "GKE Autopilot, because it lets you SSH into nodes for custom kernel tuning"
+    ],
+    "correct_index": 1,
+    "explanation": "Autopilot manages nodes for you, applies hardened defaults, and bills based on pod resource requests, matching the stated goals. HPA works on both modes; Autopilot supports regional clusters; node SSH is explicitly disallowed in Autopilot \u2014 that's the tradeoff, not a feature.",
+    "doc_links": [
+      {
+        "title": "GKE Autopilot overview",
+        "url": "https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview"
+      },
+      {
+        "title": "Autopilot vs Standard",
+        "url": "https://cloud.google.com/kubernetes-engine/docs/resources/autopilot-standard-feature-comparison"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.2-007",
+    "exam": "architect",
+    "section": "PCA-1.2",
+    "difficulty": "medium",
+    "text": "A Java microservice needs persistent SSH-less HTTP/2 traffic, 30-minute request timeouts, GPU acceleration on a fraction of requests, and the ability to scale to zero. Which compute platform satisfies ALL these requirements?",
+    "options": [
+      "App Engine standard environment",
+      "Cloud Run service with GPU enabled",
+      "Cloud Run functions (2nd gen)",
+      "GKE Standard with Spot pools"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Run services support HTTP/2, request timeouts up to 60 minutes, attached GPUs, and scale-to-zero. App Engine standard caps timeouts and lacks GPU; Cloud Run functions inherit Cloud Run features but are oriented toward event/HTTP triggers without persistent service config; GKE Standard does not scale to zero.",
+    "doc_links": [
+      {
+        "title": "Cloud Run GPU",
+        "url": "https://cloud.google.com/run/docs/configuring/services/gpu"
+      },
+      {
+        "title": "Cloud Run request timeouts",
+        "url": "https://cloud.google.com/run/docs/configuring/request-timeout"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.2-008",
+    "exam": "architect",
+    "section": "PCA-1.2",
+    "difficulty": "hard",
+    "text": "A trading firm needs sub-200-microsecond P99 between two Compute Engine VMs for an order-matching algorithm. They also need MPI-style collective operations across 32 nodes for nightly risk simulations. Which compute strategy is BEST?",
+    "options": [
+      "C3 VMs in different regions connected via Cloud VPN",
+      "Compact placement policy with C3 (or H3) VMs in the same zone for the matching pair, and an HPC-tuned cluster (Slurm-on-GCP) using H3 with placement policy for risk sims",
+      "GKE Autopilot with default scheduling for both workloads",
+      "E2 shared-core VMs with sole-tenant nodes"
+    ],
+    "correct_index": 1,
+    "explanation": "Compact placement policy with C3/H3 VMs in one zone minimizes inter-VM latency; H3 (HPC) with placement policy is Google's recommended path for tightly-coupled MPI workloads. VPN crossing regions destroys latency, GKE Autopilot is too abstract for this control, and E2 is not designed for low-latency or HPC.",
+    "doc_links": [
+      {
+        "title": "Compact placement policies",
+        "url": "https://cloud.google.com/compute/docs/instances/placement-policies-overview"
+      },
+      {
+        "title": "H3 machine series",
+        "url": "https://cloud.google.com/compute/docs/general-purpose-machines#h3_series"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.2-009",
+    "exam": "architect",
+    "section": "PCA-1.2",
+    "difficulty": "hard",
+    "text": "A company is migrating a Windows-based commercial ERP that requires a specific Windows Server version, joins the corporate AD domain, and uses license-bound binaries. They want to lift-and-shift quickly with minimal refactoring. Which choice is MOST appropriate?",
+    "options": [
+      "Re-platform onto Cloud Run for Windows containers",
+      "Compute Engine Windows VMs in a sole-tenant node group with bring-your-own-license, joined to AD via Managed Microsoft AD",
+      "GKE Windows Server node pools running the ERP as a container",
+      "App Engine standard with the .NET runtime"
+    ],
+    "correct_index": 1,
+    "explanation": "Compute Engine VMs (sole-tenant, BYOL) is the canonical lift-and-shift for licensed Windows ERP, and Managed Microsoft AD provides the AD integration without running domain controllers. Cloud Run does not run Windows containers, packaging a full Windows ERP into GKE containers is a heavy refactor, and App Engine standard cannot host a stateful licensed ERP.",
+    "doc_links": [
+      {
+        "title": "Sole-tenant nodes & BYOL",
+        "url": "https://cloud.google.com/compute/docs/nodes/bringing-your-own-licenses"
+      },
+      {
+        "title": "Managed Microsoft AD",
+        "url": "https://cloud.google.com/managed-microsoft-ad/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.3-004",
+    "exam": "architect",
+    "section": "PCA-1.3",
+    "difficulty": "easy",
+    "text": "Which storage class is the cheapest for objects accessed at most once per year and can be used as part of a lifecycle policy from Standard?",
+    "options": [
+      "Nearline",
+      "Coldline",
+      "Archive",
+      "Multi-Regional Standard"
+    ],
+    "correct_index": 2,
+    "explanation": "Archive storage has the lowest at-rest price and a 365-day minimum storage duration, intended for once-a-year or rarer access. Nearline (30 days) and Coldline (90 days) target more frequent access; Multi-Regional Standard is the most expensive tier.",
+    "doc_links": [
+      {
+        "title": "GCS storage classes",
+        "url": "https://cloud.google.com/storage/docs/storage-classes"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.3-005",
+    "exam": "architect",
+    "section": "PCA-1.3",
+    "difficulty": "easy",
+    "text": "Two GCE instances in different VPCs in the same project need private IP connectivity. Which is the simplest supported design?",
+    "options": [
+      "Set up Cloud VPN between the two VPCs",
+      "Use VPC Network Peering between the two VPCs",
+      "Place a NAT VM in each VPC and route through it",
+      "Move both VMs into the same subnet manually"
+    ],
+    "correct_index": 1,
+    "explanation": "VPC Network Peering connects two VPCs with private IP routing, no gateways, no transit hops. Cloud VPN is unnecessary overhead for same-project peering; NAT bridging is non-standard; subnets cannot span VPCs.",
+    "doc_links": [
+      {
+        "title": "VPC Network Peering",
+        "url": "https://cloud.google.com/vpc/docs/vpc-peering"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.3-006",
+    "exam": "architect",
+    "section": "PCA-1.3",
+    "difficulty": "medium",
+    "text": "An analytics team needs petabyte-scale, columnar, serverless SQL with separation of storage and compute and per-query pricing. Which service is the BEST fit?",
+    "options": [
+      "Cloud SQL for PostgreSQL with the columnar extension",
+      "BigQuery",
+      "Bigtable with SQL via Data Boost",
+      "AlloyDB for PostgreSQL"
+    ],
+    "correct_index": 1,
+    "explanation": "BigQuery is Google's serverless petabyte-scale columnar warehouse with decoupled storage/compute and on-demand or capacity-based billing. Cloud SQL and AlloyDB are OLTP row stores; Bigtable is a wide-column NoSQL store, not a SQL warehouse.",
+    "doc_links": [
+      {
+        "title": "BigQuery overview",
+        "url": "https://cloud.google.com/bigquery/docs/introduction"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.3-007",
+    "exam": "architect",
+    "section": "PCA-1.3",
+    "difficulty": "medium",
+    "text": "An on-prem application uses a POSIX NFS share to read shared media assets across many compute hosts. The team wants to migrate to GCP with the LEAST application change. Which storage option is appropriate?",
+    "options": [
+      "Cloud Storage FUSE on every VM, using a single bucket",
+      "Filestore Enterprise tier, mounted via NFSv3 from each VM",
+      "Local SSDs replicated with rsync",
+      "Persistent Disk in Read-Many mode mounted on all VMs"
+    ],
+    "correct_index": 1,
+    "explanation": "Filestore is a managed NFS service designed for POSIX-shared workloads, requiring no application changes. GCS FUSE is not POSIX-compliant and has performance limitations for shared writes; rsync between local SSDs is not shared storage; PD multi-writer is read-only and limited to two VMs.",
+    "doc_links": [
+      {
+        "title": "Filestore overview",
+        "url": "https://cloud.google.com/filestore/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.3-008",
+    "exam": "architect",
+    "section": "PCA-1.3",
+    "difficulty": "hard",
+    "text": "A global mobile gaming backend needs single-digit-millisecond reads, automatic horizontal scaling to millions of QPS, and multi-region replication, with a key-value access pattern (no joins). Which database fits BEST?",
+    "options": [
+      "Spanner multi-region configuration, sized to absorb the millions of QPS using strongly consistent global reads and writes",
+      "Bigtable with replicated clusters in two regions and multi-cluster routing",
+      "Memorystore for Redis Cluster sharded across many nodes in a single region with persistence enabled and read replicas",
+      "Firestore in Datastore mode, single region"
+    ],
+    "correct_index": 1,
+    "explanation": "Bigtable handles massive QPS, low single-digit-ms reads, and supports replicated clusters across regions with eventually-consistent multi-cluster routing \u2014 ideal for high-throughput key-value gaming workloads. Spanner is overkill (and costlier) for pure key-value, Memorystore is in-memory and not durable at this scale, and single-region Firestore fails the multi-region requirement.",
+    "doc_links": [
+      {
+        "title": "Bigtable replication",
+        "url": "https://cloud.google.com/bigtable/docs/replication-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.3-009",
+    "exam": "architect",
+    "section": "PCA-1.3",
+    "difficulty": "hard",
+    "text": "A team needs an internal HTTP load balancer that distributes traffic across services in multiple regions with cross-region failover and a single anycast VIP, while remaining inside the VPC (no public IP). Which load balancer should they choose?",
+    "options": [
+      "Internal regional Application Load Balancer in each region with DNS round-robin",
+      "Cross-region internal Application Load Balancer",
+      "External Application Load Balancer with private IP",
+      "Internal passthrough Network Load Balancer"
+    ],
+    "correct_index": 1,
+    "explanation": "The cross-region internal Application Load Balancer provides a single internal anycast VIP that routes across regional backends with built-in failover \u2014 exactly the requirement. Regional internal ALBs require DNS-based stitching, external ALBs cannot be private-only, and internal passthrough NLB is layer 4 and regional.",
+    "doc_links": [
+      {
+        "title": "Cross-region internal Application Load Balancer",
+        "url": "https://cloud.google.com/load-balancing/docs/https/cross-region-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.4-004",
+    "exam": "architect",
+    "section": "PCA-1.4",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service helps inventory an on-premises VMware estate and recommend right-sized GCE shapes before a migration?",
+    "options": [
+      "Migrate to Containers",
+      "Migration Center (with discovery client)",
+      "Database Migration Service",
+      "Transfer Appliance"
+    ],
+    "correct_index": 1,
+    "explanation": "Migration Center performs server/VM discovery and produces sizing and TCO assessments to plan a GCE migration. Migrate to Containers re-platforms VMs to GKE, DMS is for databases, and Transfer Appliance moves bulk storage \u2014 none does discovery & assessment.",
+    "doc_links": [
+      {
+        "title": "Migration Center",
+        "url": "https://cloud.google.com/migration-center/docs/migration-center-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.4-005",
+    "exam": "architect",
+    "section": "PCA-1.4",
+    "difficulty": "easy",
+    "text": "A team plans to ship 200 TB of historical files from a remote data center with limited bandwidth to Cloud Storage. Which service is purpose-built for this?",
+    "options": [
+      "Storage Transfer Service over the public internet",
+      "Transfer Appliance",
+      "gsutil parallel upload from a single workstation",
+      "Filestore replication"
+    ],
+    "correct_index": 1,
+    "explanation": "Transfer Appliance ships physical storage to the customer for offline data loads at multi-hundred-TB scale where network transfer would be too slow. STS over the internet is bandwidth-limited, gsutil from one workstation is even worse, and Filestore is an NFS service.",
+    "doc_links": [
+      {
+        "title": "Transfer Appliance",
+        "url": "https://cloud.google.com/transfer-appliance/docs/4.0/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.4-006",
+    "exam": "architect",
+    "section": "PCA-1.4",
+    "difficulty": "medium",
+    "text": "A company is migrating an on-prem Oracle database to PostgreSQL on Cloud SQL with minimal downtime. Which Google service supports the heterogeneous CDC migration?",
+    "options": [
+      "Datastream + Database Migration Service",
+      "Storage Transfer Service",
+      "Pub/Sub with custom Dataflow",
+      "Cloud Functions polling Oracle every minute"
+    ],
+    "correct_index": 0,
+    "explanation": "Database Migration Service supports heterogeneous Oracle\u2192PostgreSQL migrations using Datastream for change data capture, providing low-downtime cutover. STS is for files, custom Dataflow/Functions are heavy DIY paths that DMS+Datastream replace.",
+    "doc_links": [
+      {
+        "title": "Database Migration Service \u2014 Oracle to PostgreSQL",
+        "url": "https://cloud.google.com/database-migration/docs/oracle-to-postgresql"
+      },
+      {
+        "title": "Datastream",
+        "url": "https://cloud.google.com/datastream/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.4-007",
+    "exam": "architect",
+    "section": "PCA-1.4",
+    "difficulty": "medium",
+    "text": "A retailer is performing a wave-based migration from on-prem VMware to GCE. They want to keep on-prem and cloud workloads on the same private network during the transition with minimal additional gateways. Which connectivity option is BEST?",
+    "options": [
+      "Public IPs and IAP TCP forwarding",
+      "Cloud VPN HA tunnels for steady production-grade traffic",
+      "Dedicated Interconnect or Partner Interconnect",
+      "Cloud NAT with reverse routes"
+    ],
+    "correct_index": 2,
+    "explanation": "For sustained migration traffic with predictable bandwidth and low latency, Dedicated or Partner Interconnect provides private L2/L3 connectivity that scales beyond the per-tunnel limits of Cloud VPN. HA VPN works for smaller waves; IAP TCP forwarding and Cloud NAT do not provide on-prem private connectivity.",
+    "doc_links": [
+      {
+        "title": "Choosing a Network Connectivity product",
+        "url": "https://cloud.google.com/network-connectivity/docs/how-to/choose-product"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.4-008",
+    "exam": "architect",
+    "section": "PCA-1.4",
+    "difficulty": "hard",
+    "text": "An enterprise is moving 800 VMware VMs running stateful Java apps with attached MS SQL databases. They want a phased move that converts a subset of VMs into containers while keeping the databases on managed services. Which combination is BEST?",
+    "options": [
+      "Migrate to Virtual Machines for stateless app VMs to GCE; Migrate to Containers (M4C) for selected stateless tiers; Database Migration Service for SQL Server\u2192Cloud SQL for SQL Server",
+      "Lift-and-shift everything to a single GKE Autopilot cluster",
+      "Rewrite all 800 apps in Cloud Run before migrating",
+      "Use Storage Transfer Service to copy VMDK files into GCS and run them from there"
+    ],
+    "correct_index": 0,
+    "explanation": "Migrate to VMs handles bulk lift-and-shift, M4C re-platforms candidate VMs to containers, and DMS handles the SQL Server side onto Cloud SQL \u2014 a realistic phased pattern. Forcing everything into GKE or Cloud Run is a rewrite, and GCS does not run VMDKs.",
+    "doc_links": [
+      {
+        "title": "Migrate to Virtual Machines",
+        "url": "https://cloud.google.com/migrate/virtual-machines/docs/5.0/concepts/about-migrate-to-virtual-machines"
+      },
+      {
+        "title": "Migrate to Containers",
+        "url": "https://cloud.google.com/migrate/containers/docs/about-mft-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.4-009",
+    "exam": "architect",
+    "section": "PCA-1.4",
+    "difficulty": "hard",
+    "text": "During cutover of a heterogeneous DMS migration from MySQL to Cloud SQL, the application must continue dual-write briefly while the team validates parity, then switch reads. Which migration strategy does this describe and what is the principal risk?",
+    "options": [
+      "Big-bang migration; risk: rollback is impossible",
+      "Parallel run with dual-write; risk: write conflicts and divergence between source and target if not carefully sequenced",
+      "Canary deployment; risk: the canary cluster cannot handle DR",
+      "Strangler-fig refactor; risk: monolith cannot be decomposed"
+    ],
+    "correct_index": 1,
+    "explanation": "Dual-writing to source and target during validation is a parallel-run pattern; the canonical risk is divergence/conflict between the two stores if writes aren't carefully sequenced or arbitrated. Big-bang lacks the dual-write step, canary/strangler-fig describe service-level rollouts not data migrations.",
+    "doc_links": [
+      {
+        "title": "Database migration concepts",
+        "url": "https://cloud.google.com/architecture/database-migration-concepts-principles-part-1"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.5-004",
+    "exam": "architect",
+    "section": "PCA-1.5",
+    "difficulty": "easy",
+    "text": "Which service lets a team publish events from one producer and have multiple independent subscribers consume them at their own pace?",
+    "options": [
+      "Cloud Tasks",
+      "Pub/Sub",
+      "Cloud Scheduler",
+      "Cloud Storage notifications only"
+    ],
+    "correct_index": 1,
+    "explanation": "Pub/Sub is Google's managed publish/subscribe service supporting multiple independent subscribers per topic with at-least-once delivery. Cloud Tasks targets per-task execution to a single worker, Cloud Scheduler triggers cron-style jobs, and GCS notifications are a producer that typically publishes into Pub/Sub.",
+    "doc_links": [
+      {
+        "title": "Pub/Sub overview",
+        "url": "https://cloud.google.com/pubsub/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.5-005",
+    "exam": "architect",
+    "section": "PCA-1.5",
+    "difficulty": "easy",
+    "text": "Which feature on a Compute Engine managed instance group automatically adjusts the number of running VMs based on CPU utilization or load-balancer metrics?",
+    "options": [
+      "Health checks",
+      "Autohealing",
+      "Autoscaling",
+      "Live migration"
+    ],
+    "correct_index": 2,
+    "explanation": "Autoscaling on a MIG adds or removes instances based on signals such as CPU utilization, LB serving capacity, or custom Monitoring metrics. Health checks identify unhealthy instances; autohealing recreates them; live migration is a maintenance feature, not a scaling control.",
+    "doc_links": [
+      {
+        "title": "MIG autoscaling",
+        "url": "https://cloud.google.com/compute/docs/autoscaler"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.5-006",
+    "exam": "architect",
+    "section": "PCA-1.5",
+    "difficulty": "medium",
+    "text": "A team designs a write-heavy ingestion API behind Cloud Run that occasionally receives 50x normal traffic for short bursts. They want to absorb spikes without dropping events and decouple producers from consumers. Which pattern fits BEST?",
+    "options": [
+      "Cloud Run handlers write each request synchronously into Bigtable, sized for steady-state QPS and relying on client retries during spikes",
+      "Cloud Run publishes to Pub/Sub; downstream Cloud Run/Functions subscribers process at their own rate with retries",
+      "Buffer all incoming events to a single Memorystore for Redis instance and process them inline before responding to the caller",
+      "Write each request as a row into a regional Cloud SQL instance and use Cloud Scheduler cron jobs to drain the table periodically"
+    ],
+    "correct_index": 1,
+    "explanation": "Pub/Sub absorbs bursts, decouples ingest from processing, and supports retries with dead-letter topics \u2014 the classic spike-absorbing pattern. Direct Bigtable writes couple producer rate to backend capacity, a single Memorystore is a SPOF and not durable, and Cloud SQL + cron forfeits low-latency event handling.",
+    "doc_links": [
+      {
+        "title": "Pub/Sub patterns",
+        "url": "https://cloud.google.com/pubsub/docs/publish-receive-messages-client-library"
+      },
+      {
+        "title": "Pub/Sub dead-letter topics",
+        "url": "https://cloud.google.com/pubsub/docs/handling-failures"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.5-007",
+    "exam": "architect",
+    "section": "PCA-1.5",
+    "difficulty": "medium",
+    "text": "An e-commerce service stores session state in a single Memorystore for Redis instance and the team is worried about both single-zone failure and traffic growth. Which evolution is the MOST appropriate next step?",
+    "options": [
+      "Move sessions into Cloud Storage as JSON objects",
+      "Switch to Memorystore for Redis Cluster (or Memorystore for Valkey) with multiple shards and read replicas across zones",
+      "Switch to Bigtable single-cluster",
+      "Disable Redis and use sticky sessions on the load balancer only"
+    ],
+    "correct_index": 1,
+    "explanation": "Memorystore for Redis Cluster (and Valkey) shards data across nodes for horizontal scale and supports cross-zone replicas for HA \u2014 directly addressing both growth and zonal failure. GCS JSON is too slow for sessions, Bigtable single-cluster is single-zone, and sticky sessions alone don't survive instance loss.",
+    "doc_links": [
+      {
+        "title": "Memorystore for Redis Cluster",
+        "url": "https://cloud.google.com/memorystore/docs/cluster/memorystore-for-redis-cluster-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.5-008",
+    "exam": "architect",
+    "section": "PCA-1.5",
+    "difficulty": "hard",
+    "text": "A SaaS platform expects 30% YoY data growth and unpredictable per-tenant query bursts. They run on BigQuery with on-demand pricing today and want to control cost variance and isolate noisy tenants. Which design BEST balances cost predictability and isolation?",
+    "options": [
+      "Switch all workloads to a single small flat-rate slot commitment",
+      "Adopt BigQuery Editions with autoscaling reservations, assign per-tenant projects to dedicated reservations, and apply baseline + max slots per tier",
+      "Move all queries to Bigtable for predictable cost",
+      "Use materialized views for every tenant query and keep on-demand pricing"
+    ],
+    "correct_index": 1,
+    "explanation": "BigQuery Editions with autoscaling reservations let you commit a baseline, scale up to a cap per workload, and assign tenants to isolated reservations \u2014 the canonical multi-tenant cost-and-isolation pattern. A single small flat-rate is too rigid, Bigtable is the wrong workload, and materialized views alone don't address concurrency isolation.",
+    "doc_links": [
+      {
+        "title": "BigQuery Editions and reservations",
+        "url": "https://cloud.google.com/bigquery/docs/reservations-intro"
+      },
+      {
+        "title": "Workload management with reservations",
+        "url": "https://cloud.google.com/bigquery/docs/reservations-workload-management"
+      }
+    ]
+  },
+  {
+    "id": "pca-1.5-009",
+    "exam": "architect",
+    "section": "PCA-1.5",
+    "difficulty": "hard",
+    "text": "A globally distributed mobile app expects 10x growth in writes and reads over 18 months and needs strong consistency for user-profile reads after writes. The current backend is a single-region Firestore database. Which evolution path BEST preserves consistency while scaling?",
+    "options": [
+      "Add cross-region read replicas to the existing Firestore database",
+      "Migrate to a Spanner multi-region instance with regional read-write replicas",
+      "Shard the Firestore database into multiple single-region databases by user-ID prefix and route in the client",
+      "Move to Bigtable with multi-cluster routing using last-write-wins"
+    ],
+    "correct_index": 1,
+    "explanation": "Spanner multi-region preserves strong consistency at global scale and absorbs the projected growth without client-side sharding. Firestore does not currently expose user-managed cross-region read replicas, client-side sharding pushes consistency complexity into apps, and Bigtable's multi-cluster eventually-consistent routing breaks the read-after-write requirement.",
+    "doc_links": [
+      {
+        "title": "Spanner multi-region",
+        "url": "https://cloud.google.com/spanner/docs/instance-configurations#multi-region-configurations"
+      },
+      {
+        "title": "Spanner consistency",
+        "url": "https://cloud.google.com/spanner/docs/true-time-external-consistency"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.1-004",
+    "exam": "architect",
+    "section": "PCA-2.1",
+    "difficulty": "easy",
+    "text": "A team needs to give Compute Engine VMs without external IPs the ability to reach the public internet for OS package updates. Which managed service provides this?",
+    "options": [
+      "Cloud VPN",
+      "Cloud NAT",
+      "Cloud Interconnect",
+      "Direct Peering"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud NAT provides outbound-only internet access for private VMs without exposing them with external IPs. Cloud VPN connects VPCs to other networks, Interconnect/Direct Peering provide private connectivity to on-prem or Google services, not generic internet egress.",
+    "doc_links": [
+      {
+        "title": "Cloud NAT overview",
+        "url": "https://cloud.google.com/nat/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.1-005",
+    "exam": "architect",
+    "section": "PCA-2.1",
+    "difficulty": "easy",
+    "text": "Which design pattern lets multiple service projects share a single common VPC while keeping IAM and billing separate?",
+    "options": [
+      "VPC Network Peering",
+      "Shared VPC with a host project and service projects",
+      "Cloud Interconnect attachments per project",
+      "Cross-project subnet exports"
+    ],
+    "correct_index": 1,
+    "explanation": "Shared VPC lets a host project own subnets that service projects attach to, centralizing networking while preserving per-project IAM and billing. Peering connects independent VPCs without sharing IAM, and Interconnect/'subnet exports' aren't this pattern.",
+    "doc_links": [
+      {
+        "title": "Shared VPC",
+        "url": "https://cloud.google.com/vpc/docs/shared-vpc"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.1-006",
+    "exam": "architect",
+    "section": "PCA-2.1",
+    "difficulty": "medium",
+    "text": "An enterprise has a hub VPC and 12 spoke VPCs across two regions. They need transitive private routing between spokes (peering is not transitive) with minimal operational overhead. Which design fits BEST?",
+    "options": [
+      "Full mesh of VPC Network Peering between every pair of spokes",
+      "Network Connectivity Center with VPC spokes attached to a hub",
+      "HA VPN tunnels between every spoke pair",
+      "A single Shared VPC and migrate all workloads into it"
+    ],
+    "correct_index": 1,
+    "explanation": "Network Connectivity Center (NCC) provides a hub-and-spoke topology with transitive routing across attached VPCs, replacing the N\u00b2 peering mesh. A peering full mesh is operationally expensive, VPN mesh is heavier still, and consolidating into one Shared VPC may not match team or billing boundaries.",
+    "doc_links": [
+      {
+        "title": "Network Connectivity Center",
+        "url": "https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.1-007",
+    "exam": "architect",
+    "section": "PCA-2.1",
+    "difficulty": "medium",
+    "text": "An application in `us-east1` makes thousands of small calls to a private Cloud SQL instance in `europe-west1`. Latency is the primary concern. What is the BEST mitigation?",
+    "options": [
+      "Add Cloud CDN in front of the private Cloud SQL instance so frequently-issued queries are cached close to the application tier",
+      "Move the Cloud SQL instance (or a read replica) into us-east1 to remove transcontinental round-trips",
+      "Switch the VPC routing mode to global so cross-region traffic stays internal to Google's backbone instead of leaving the VPC",
+      "Increase the Cloud SQL machine size to a higher CPU/memory tier so each query completes faster on the database server side"
+    ],
+    "correct_index": 1,
+    "explanation": "Latency between continents is bounded by physics; the only durable fix is to co-locate compute and the database (move primary or add a regional read replica). Cloud CDN does not cache database queries, global VPC routing doesn't shorten geographic distance, and a bigger machine doesn't reduce round-trip time.",
+    "doc_links": [
+      {
+        "title": "Cloud SQL read replicas",
+        "url": "https://cloud.google.com/sql/docs/mysql/replication"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.1-008",
+    "exam": "architect",
+    "section": "PCA-2.1",
+    "difficulty": "hard",
+    "text": "A company connects its on-prem data center to GCP via two 10 Gbps Dedicated Interconnect links in different metro locations. They need an SLA-backed topology. What is the MINIMUM supported configuration?",
+    "options": [
+      "One Interconnect VLAN attachment terminated on a single Cloud Router with one BGP session in a single edge availability domain",
+      "Two attachments in two edge availability domains across two metros, two Cloud Routers, BGP on both, configured per the 99.99% SLA topology",
+      "A single VLAN attachment over a Partner Interconnect with one Cloud Router and one BGP session for the on-prem peer",
+      "One Dedicated Interconnect attachment in one metro plus a pair of HA VPN tunnels as the primary failover path for the link"
+    ],
+    "correct_index": 1,
+    "explanation": "The 99.99% Dedicated Interconnect topology requires attachments in two distinct edge-availability domains in two metros, each terminating on its own Cloud Router with BGP. A single attachment yields no SLA, single Partner Interconnect doesn't reach 99.99%, and adding VPN doesn't change the Interconnect SLA tier.",
+    "doc_links": [
+      {
+        "title": "Dedicated Interconnect 99.99% topology",
+        "url": "https://cloud.google.com/network-connectivity/docs/interconnect/concepts/dedicated-overview#availability"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.1-009",
+    "exam": "architect",
+    "section": "PCA-2.1",
+    "difficulty": "hard",
+    "text": "A platform team needs centralized egress filtering and inspection for all VPCs across the organization, with the ability to enforce per-FQDN allowlists for outbound traffic. Which design is MOST appropriate?",
+    "options": [
+      "Cloud NAT with VPC flow logs enabled at the central transit VPC, reviewed weekly by the security team for unexpected destinations",
+      "Cloud Next Generation Firewall Enterprise with intrusion prevention and FQDN-based egress policies attached via hierarchical firewall policies",
+      "Per-VM iptables rules pushed by the configuration management agent, with FQDN allowlists rendered from a central source of truth",
+      "Organization Policy compute.vmExternalIpAccess set to deny so workloads cannot reach public internet destinations from VM external IPs"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud NGFW Enterprise adds intrusion prevention and supports FQDN/URL-based egress policy enforced through hierarchical firewall policies attached at folder/VPC scope. Cloud NAT only logs, per-VM iptables doesn't scale, and the org policy only blocks external IPs (it doesn't inspect traffic).",
+    "doc_links": [
+      {
+        "title": "Cloud Next Generation Firewall",
+        "url": "https://cloud.google.com/firewall/docs/about-firewalls"
+      },
+      {
+        "title": "FQDN objects in firewall policies",
+        "url": "https://cloud.google.com/firewall/docs/firewall-policies-rule-details"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.2-004",
+    "exam": "architect",
+    "section": "PCA-2.2",
+    "difficulty": "easy",
+    "text": "A workload needs the highest IOPS available on Google Cloud for a single VM (sub-millisecond latency). Which storage choice is BEST?",
+    "options": [
+      "Standard persistent disk (pd-standard)",
+      "Local SSD attached to the VM",
+      "Filestore Basic HDD",
+      "Cloud Storage Standard"
+    ],
+    "correct_index": 1,
+    "explanation": "Local SSDs are physically attached to the host and offer the highest IOPS and lowest latency on GCE, at the cost of being ephemeral. Persistent disks are network-attached (lower IOPS, higher latency), Filestore Basic HDD is throughput-optimized, and GCS is object storage with much higher latency.",
+    "doc_links": [
+      {
+        "title": "Local SSDs",
+        "url": "https://cloud.google.com/compute/docs/disks/local-ssd"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.2-005",
+    "exam": "architect",
+    "section": "PCA-2.2",
+    "difficulty": "easy",
+    "text": "Which Cloud Storage feature automatically transitions objects from Standard to Coldline after 90 days?",
+    "options": [
+      "Object Versioning",
+      "Object lifecycle management",
+      "Bucket Lock",
+      "Requester Pays"
+    ],
+    "correct_index": 1,
+    "explanation": "Object lifecycle management lets you define rules that change storage class or delete objects based on age and other conditions. Versioning preserves overwrites, Bucket Lock enforces retention, and Requester Pays shifts download cost to callers.",
+    "doc_links": [
+      {
+        "title": "Object lifecycle management",
+        "url": "https://cloud.google.com/storage/docs/lifecycle"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.2-006",
+    "exam": "architect",
+    "section": "PCA-2.2",
+    "difficulty": "medium",
+    "text": "A PostgreSQL workload on GCE needs durable storage with up to 100,000 random read IOPS, balanced cost, and the ability to grow to 64 TB. Which disk type is BEST?",
+    "options": [
+      "pd-standard",
+      "pd-balanced",
+      "Hyperdisk Extreme",
+      "Local SSD"
+    ],
+    "correct_index": 2,
+    "explanation": "Hyperdisk Extreme is the right tier when you need to provision very high IOPS independently of capacity for performance-critical databases. pd-balanced caps below this performance, pd-standard is HDD-class, and Local SSD is non-durable (lost on stop).",
+    "doc_links": [
+      {
+        "title": "Hyperdisk overview",
+        "url": "https://cloud.google.com/compute/docs/disks/hyperdisks"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.2-007",
+    "exam": "architect",
+    "section": "PCA-2.2",
+    "difficulty": "medium",
+    "text": "A team needs a network-attached file system mounted by 200 GKE pods that supports POSIX semantics and concurrent shared writes. Which option is BEST?",
+    "options": [
+      "A regional Persistent Disk attached in Read-Many (multi-reader) mode to every node hosting the 200 pods needing the share",
+      "Filestore (with the GKE CSI driver) providing an NFS share",
+      "Cloud Storage FUSE mounted on each pod with write caching enabled and the same bucket prefix shared across all writers",
+      "Local SSD provisioned per node, exposed to pods via hostPath, and synchronized across nodes with a sidecar replicator"
+    ],
+    "correct_index": 1,
+    "explanation": "Filestore is the managed NFS service and the recommended POSIX shared-write option for GKE via its CSI driver. PD multi-writer is read-only beyond a couple of writers, GCS FUSE is not fully POSIX-compliant for concurrent writes, and Local SSD is per-node not shared.",
+    "doc_links": [
+      {
+        "title": "Filestore CSI driver for GKE",
+        "url": "https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#filestore"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.2-008",
+    "exam": "architect",
+    "section": "PCA-2.2",
+    "difficulty": "hard",
+    "text": "An HPC team needs a shared parallel file system delivering hundreds of GB/s of aggregate throughput to thousands of GCE compute nodes for a tightly-coupled simulation. Which storage option fits BEST?",
+    "options": [
+      "Filestore Enterprise tier",
+      "Parallelstore (managed parallel file system based on DAOS)",
+      "Cloud Storage with parallel composite uploads",
+      "Hyperdisk Throughput attached to each VM"
+    ],
+    "correct_index": 1,
+    "explanation": "Parallelstore is Google's managed high-performance parallel file system designed for HPC/AI workloads needing very high aggregate throughput across many clients. Filestore Enterprise tops out far below that, GCS is object storage (not POSIX/parallel), and Hyperdisk is per-VM attached storage.",
+    "doc_links": [
+      {
+        "title": "Parallelstore",
+        "url": "https://cloud.google.com/parallelstore/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.2-009",
+    "exam": "architect",
+    "section": "PCA-2.2",
+    "difficulty": "hard",
+    "text": "A media company stores 5 PB of finished assets in GCS Standard. They access \u2248 1% of the catalog daily and the rest rarely. They want lowest cost without breaking access patterns and tolerate ~30s retrieval for cold objects. Which strategy is BEST?",
+    "options": [
+      "Move the entire 5 PB catalog to the Archive storage class immediately to minimize at-rest cost regardless of access pattern",
+      "Enable Autoclass on the bucket so objects move to colder classes based on access patterns automatically",
+      "Author a single lifecycle rule that transitions every object to Coldline at age 0 and accept the early-access fees",
+      "Shard the catalog across many regional buckets organized by asset hash prefix to reduce per-bucket object count"
+    ],
+    "correct_index": 1,
+    "explanation": "Autoclass automatically promotes/demotes objects across Standard\u2192Nearline\u2192Coldline\u2192Archive based on observed access, optimizing cost without manual lifecycle policy maintenance for mixed access patterns. Forcing all to Archive incurs early-deletion fees and slow retrieval, blanket Coldline overcharges hot objects, and bucket sharding doesn't change per-object cost.",
+    "doc_links": [
+      {
+        "title": "Autoclass",
+        "url": "https://cloud.google.com/storage/docs/autoclass"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.3-004",
+    "exam": "architect",
+    "section": "PCA-2.3",
+    "difficulty": "easy",
+    "text": "Which Compute Engine machine family is recommended as the default general-purpose choice for cost-balanced web/app workloads with the latest Intel processors?",
+    "options": [
+      "E2",
+      "C3",
+      "N2D",
+      "M3"
+    ],
+    "correct_index": 1,
+    "explanation": "C3 is Google's latest Intel-based general-purpose family with strong price-performance for web/app workloads. E2 is cost-optimized but older and shared-core; N2D is AMD; M3 is memory-optimized.",
+    "doc_links": [
+      {
+        "title": "Machine families",
+        "url": "https://cloud.google.com/compute/docs/machine-resource"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.3-005",
+    "exam": "architect",
+    "section": "PCA-2.3",
+    "difficulty": "easy",
+    "text": "Which feature lets a Compute Engine VM continue running through host maintenance events without restart?",
+    "options": [
+      "Live migration (default for general-purpose VMs)",
+      "Preemptible VMs",
+      "Sole-tenant nodes",
+      "Confidential VMs always require restart"
+    ],
+    "correct_index": 0,
+    "explanation": "Live migration moves running VMs to another host during maintenance with no reboot \u2014 the default for general-purpose families. Preemptible/Spot VMs are explicitly stoppable, sole-tenant is for hardware isolation, and Confidential VMs do support live migration on supported families.",
+    "doc_links": [
+      {
+        "title": "Live migration",
+        "url": "https://cloud.google.com/compute/docs/instances/live-migration-process"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.3-006",
+    "exam": "architect",
+    "section": "PCA-2.3",
+    "difficulty": "medium",
+    "text": "A team's stateless workload runs fine on N2 VMs but they want a 20\u201340% price/performance improvement and are willing to switch CPU architecture. Which choice is MOST appropriate?",
+    "options": [
+      "Switch the MIG to E2 shared-core machine types and rely on the cost-optimized scheduling to absorb peak load",
+      "Switch to T2A or C4A (Google Axion / Arm) and rebuild the container for arm64",
+      "Move the workload to M3 memory-optimized VMs to take advantage of the higher per-core memory ratio",
+      "Place the existing N2 VMs on sole-tenant nodes so the workload gets dedicated hardware with no noisy neighbors"
+    ],
+    "correct_index": 1,
+    "explanation": "Arm-based families (T2A and the newer Google Axion C4A) typically offer 20\u201340% price/performance improvements for stateless cloud-native workloads after a multi-arch container rebuild. E2 trades performance for cost, M3 is memory-optimized (different goal), and sole-tenant is about isolation, not performance.",
+    "doc_links": [
+      {
+        "title": "Arm VMs (T2A)",
+        "url": "https://cloud.google.com/compute/docs/general-purpose-machines#t2a_machines"
+      },
+      {
+        "title": "C4A (Google Axion)",
+        "url": "https://cloud.google.com/blog/products/compute/introducing-googles-new-arm-based-cpu"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.3-007",
+    "exam": "architect",
+    "section": "PCA-2.3",
+    "difficulty": "medium",
+    "text": "A team running a Cloud Run service finds CPU is being throttled outside of request handling, breaking background callbacks. Which configuration change is the simplest fix?",
+    "options": [
+      "Switch the workload to GKE Autopilot so background goroutines keep running on always-allocated pod CPU outside request handling",
+      "Enable CPU always-allocated (instance-based billing) on the Cloud Run service so background work runs between requests",
+      "Increase request concurrency to 1000 so more requests overlap and the instance stays warm enough for background callbacks",
+      "Switch to Cloud Run jobs and trigger the background callbacks on a Cloud Scheduler cron at the desired callback frequency"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Run's default 'CPU only during requests' throttles work between requests; enabling instance-based CPU allocation lets background tasks keep running. More concurrency does not help, switching to jobs changes the execution model (one-shot, no requests), and moving to GKE is far heavier.",
+    "doc_links": [
+      {
+        "title": "Cloud Run CPU allocation",
+        "url": "https://cloud.google.com/run/docs/configuring/cpu-allocation"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.3-008",
+    "exam": "architect",
+    "section": "PCA-2.3",
+    "difficulty": "hard",
+    "text": "An ML team needs a Compute Engine GPU instance for training that uses NVIDIA H100 with NVLink and high-speed GPU-to-GPU bandwidth. Which choice is BEST?",
+    "options": [
+      "G2 instances (NVIDIA L4)",
+      "A3 instances (NVIDIA H100 with NVLink/NVSwitch)",
+      "N1 with attached T4 GPUs",
+      "C3 with TPU v5e attached"
+    ],
+    "correct_index": 1,
+    "explanation": "A3 VMs are Google's H100-based platform with NVLink/NVSwitch GPU interconnect, designed for large-model training. G2 (L4) and N1+T4 are inference-focused and lack NVLink, and TPUs are attached to TPU VMs, not C3.",
+    "doc_links": [
+      {
+        "title": "A3 GPU machine series",
+        "url": "https://cloud.google.com/compute/docs/accelerator-optimized-machines#a3_series"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.3-009",
+    "exam": "architect",
+    "section": "PCA-2.3",
+    "difficulty": "hard",
+    "text": "A regulated workload requires that no other tenant runs on the same physical host AND that the OS license is brought from on-prem. Which configuration BEST satisfies this?",
+    "options": [
+      "Confidential VM with Shielded VM enabled",
+      "Sole-tenant nodes with bring-your-own-license",
+      "GKE Autopilot with `securityContext.runAsNonRoot`",
+      "Spot VMs with custom images"
+    ],
+    "correct_index": 1,
+    "explanation": "Sole-tenant nodes give you a dedicated physical host (no neighbors) and explicitly support BYOL for OS licenses. Confidential VMs encrypt memory but share hosts, Autopilot enforces pod-level security but not host isolation, and Spot VMs are about cost/preemption.",
+    "doc_links": [
+      {
+        "title": "Sole-tenant nodes",
+        "url": "https://cloud.google.com/compute/docs/nodes/sole-tenant-nodes"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.4-004",
+    "exam": "architect",
+    "section": "PCA-2.4",
+    "difficulty": "easy",
+    "text": "Which BigQuery feature lets you keep tables of the same schema partitioned by date so that queries scan only the relevant partitions?",
+    "options": [
+      "Clustering by hash",
+      "Date/timestamp partitioning",
+      "Materialized views",
+      "Authorized views"
+    ],
+    "correct_index": 1,
+    "explanation": "Partitioning by ingestion time, date, or integer range prunes scans to the relevant partitions, reducing cost and latency. Clustering further optimizes within partitions, materialized views precompute aggregates, and authorized views are an access-control pattern.",
+    "doc_links": [
+      {
+        "title": "BigQuery partitioned tables",
+        "url": "https://cloud.google.com/bigquery/docs/partitioned-tables"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.4-005",
+    "exam": "architect",
+    "section": "PCA-2.4",
+    "difficulty": "easy",
+    "text": "Where does GCS data physically reside if a bucket is created with the location `US` (multi-region)?",
+    "options": [
+      "In a single specific zone within the us-central1 region, replicated synchronously to two other zones inside that region",
+      "Across multiple regions within the United States, with redundancy across them",
+      "In every Google Cloud region globally, with the closest region serving each request and lazy replication elsewhere",
+      "Only in customer-selected on-prem locations connected via Google Distributed Cloud Edge appliances managed in the project"
+    ],
+    "correct_index": 1,
+    "explanation": "A `US` multi-region bucket stores data redundantly across multiple US regions, providing higher availability than a single region. It is not single-zone, not all-global, and certainly not on-prem.",
+    "doc_links": [
+      {
+        "title": "Bucket locations",
+        "url": "https://cloud.google.com/storage/docs/locations"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.4-006",
+    "exam": "architect",
+    "section": "PCA-2.4",
+    "difficulty": "medium",
+    "text": "A regulated workload requires that BigQuery query results, intermediate files, and exports stay within the EU. Which configuration is REQUIRED?",
+    "options": [
+      "Create the dataset in the `EU` multi-region (or a specific EU region) and only run queries from clients that submit jobs in that region",
+      "Use any region for the dataset but enable CMEK with EU-located keys so encryption operations happen inside EU key rings",
+      "Create the dataset in `US` and apply IAM Conditions limiting query access to principals whose Workspace account is in an EU country",
+      "Export the result of every BigQuery job to a Cloud Storage bucket in the EU and have applications read only from that bucket"
+    ],
+    "correct_index": 0,
+    "explanation": "BigQuery query jobs and storage are bound to the dataset's location; the only way to keep all processing inside the EU is to locate the dataset there and submit jobs to that location. CMEK key location and IAM restrictions don't change data residency, and exports happen after processing has already occurred.",
+    "doc_links": [
+      {
+        "title": "BigQuery data locations",
+        "url": "https://cloud.google.com/bigquery/docs/locations"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.4-007",
+    "exam": "architect",
+    "section": "PCA-2.4",
+    "difficulty": "medium",
+    "text": "A team needs to share a curated subset of a BigQuery dataset with an external partner across organizations, without copying data and with separate billing for the consumer. Which feature fits BEST?",
+    "options": [
+      "Authorized views in the producer's project",
+      "Analytics Hub (BigQuery sharing) with a published listing",
+      "Scheduled queries that export CSVs to a shared bucket",
+      "Granting the partner the BigQuery Data Owner role on the dataset"
+    ],
+    "correct_index": 1,
+    "explanation": "Analytics Hub publishes a curated dataset listing that consumers subscribe to in their own projects \u2014 no copy, with consumer-side query billing. Authorized views work within a single org/project boundary, scheduled exports duplicate data, and granting Data Owner is overpermissive and bills the producer.",
+    "doc_links": [
+      {
+        "title": "Analytics Hub",
+        "url": "https://cloud.google.com/bigquery/docs/analytics-hub-introduction"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.4-008",
+    "exam": "architect",
+    "section": "PCA-2.4",
+    "difficulty": "hard",
+    "text": "An organization needs a unified governance layer over data in BigQuery and GCS \u2014 lineage, classification, fine-grained access via attribute-based tags, and a central data catalog \u2014 across many projects. Which service should be adopted?",
+    "options": [
+      "The legacy standalone Data Catalog service operated independently of Dataplex, with manual tag templates per project",
+      "Dataplex Universal Catalog (with policy tags and lineage)",
+      "Cloud DLP (Sensitive Data Protection) inspection jobs scheduled per bucket to classify objects by sensitive-data type",
+      "BigQuery row-level security policies applied per dataset to restrict which rows individual principals can read in a query"
+    ],
+    "correct_index": 1,
+    "explanation": "Dataplex Universal Catalog unifies cataloging, lineage, classification, and policy-tag-based access control across GCS and BigQuery. Legacy Data Catalog is being subsumed by Dataplex, DLP is content inspection (not governance), and BigQuery row-level security is a single feature within one product.",
+    "doc_links": [
+      {
+        "title": "Dataplex Universal Catalog",
+        "url": "https://cloud.google.com/dataplex/docs/introduction"
+      }
+    ]
+  },
+  {
+    "id": "pca-2.4-009",
+    "exam": "architect",
+    "section": "PCA-2.4",
+    "difficulty": "hard",
+    "text": "A BigQuery dataset has tables that are append-only with a typical query pattern of `WHERE event_date BETWEEN ... AND user_id = ...`. Tables are 10 TB. Which physical design BEST reduces scan cost?",
+    "options": [
+      "Partition by `event_date` and cluster by `user_id`",
+      "Partition by `user_id` modulo 100",
+      "Materialize one table per user",
+      "No optimization needed; on-demand billing handles it"
+    ],
+    "correct_index": 0,
+    "explanation": "Date partitioning prunes by `event_date`, and clustering by `user_id` colocates rows so the per-partition scan reads fewer blocks \u2014 the canonical pattern for time-range + filtered-id queries. Per-user partitioning explodes partition count, table-per-user is unmanageable, and ignoring physical design defeats the cost goal.",
+    "doc_links": [
+      {
+        "title": "Clustered tables",
+        "url": "https://cloud.google.com/bigquery/docs/clustered-tables"
+      },
+      {
+        "title": "Partitioning best practices",
+        "url": "https://cloud.google.com/bigquery/docs/best-practices-storage"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.1-006",
+    "exam": "architect",
+    "section": "PCA-3.1",
+    "difficulty": "easy",
+    "text": "Which IAM principle states that users and services should be granted only the permissions they actually need?",
+    "options": [
+      "Defense in depth",
+      "Least privilege",
+      "Separation of duties",
+      "Zero trust"
+    ],
+    "correct_index": 1,
+    "explanation": "Least privilege grants only the permissions required for a task, minimizing blast radius. Defense in depth, separation of duties, and zero trust are related security principles but describe different concepts.",
+    "doc_links": [
+      {
+        "title": "IAM overview",
+        "url": "https://cloud.google.com/iam/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.1-007",
+    "exam": "architect",
+    "section": "PCA-3.1",
+    "difficulty": "easy",
+    "text": "Which feature lets a service running on GCE call other Google APIs without managing static keys?",
+    "options": [
+      "Generate per-VM JSON service-account key files at provisioning time and ship them to each instance via Secret Manager",
+      "An attached service account on the VM, used via the metadata server (default credentials)",
+      "Embed an OAuth client ID and client secret in the instance startup script and exchange them for tokens on each boot",
+      "Bake an end-user's gcloud refresh token into the custom image so every VM authenticates as that human identity"
+    ],
+    "correct_index": 1,
+    "explanation": "Attaching a service account to a VM lets workloads obtain short-lived tokens from the metadata server \u2014 no static keys to manage or rotate. Static JSON keys, OAuth client secrets, and embedded user credentials are all anti-patterns.",
+    "doc_links": [
+      {
+        "title": "Attached service accounts",
+        "url": "https://cloud.google.com/compute/docs/access/service-accounts"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.1-008",
+    "exam": "architect",
+    "section": "PCA-3.1",
+    "difficulty": "hard",
+    "text": "A GitHub Actions pipeline needs to deploy to Google Cloud without storing a long-lived service-account key as a GitHub secret. What is the recommended pattern?",
+    "options": [
+      "Generate a service-account key, store it as a GitHub secret, and rotate it monthly",
+      "Configure Workload Identity Federation with GitHub OIDC and impersonate a service account from the workflow",
+      "Use a personal access token of an organization owner",
+      "Embed the key in the GitHub repository as an encrypted file"
+    ],
+    "correct_index": 1,
+    "explanation": "Workload Identity Federation lets external OIDC identities (like GitHub Actions) directly impersonate a service account, eliminating long-lived keys. Storing or embedding keys, or relying on user PATs, are exactly the patterns WIF replaces.",
+    "doc_links": [
+      {
+        "title": "Workload Identity Federation",
+        "url": "https://cloud.google.com/iam/docs/workload-identity-federation"
+      },
+      {
+        "title": "Configure WIF with GitHub Actions",
+        "url": "https://cloud.google.com/blog/products/identity-security/enabling-keyless-authentication-from-github-actions"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.1-009",
+    "exam": "architect",
+    "section": "PCA-3.1",
+    "difficulty": "hard",
+    "text": "A platform team needs to grant a contractor write access to a single GCS bucket, but ONLY when accessed from corporate IPs and only for the next 30 days. Which IAM construct fits BEST?",
+    "options": [
+      "Add the contractor as Storage Object Admin at the project level so they can write to the bucket along with their other working buckets",
+      "Grant Storage Object Admin on the bucket with an IAM Condition restricting request.time and request.ip via Access Context Manager",
+      "Create a service account, generate and email a long-lived JSON key to the contractor, and rotate it manually after the engagement ends",
+      "Add the contractor to a custom IAM role at the organization level so the same identity can be reused for any future engagements"
+    ],
+    "correct_index": 1,
+    "explanation": "IAM Conditions support time-bound and (via Access Context Manager) network-restricted bindings on a single resource \u2014 exactly the requested constraints. Project-level admin is too broad, sharing keys is an anti-pattern, and an org-level custom role is way over-scoped.",
+    "doc_links": [
+      {
+        "title": "IAM Conditions",
+        "url": "https://cloud.google.com/iam/docs/conditions-overview"
+      },
+      {
+        "title": "Access Context Manager",
+        "url": "https://cloud.google.com/access-context-manager/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.2-004",
+    "exam": "architect",
+    "section": "PCA-3.2",
+    "difficulty": "easy",
+    "text": "By default, what encryption is applied to data stored in Google Cloud?",
+    "options": [
+      "Customer must provide their own keys before any data can be written",
+      "Google-managed encryption at rest with AES-256, applied by default",
+      "Encryption is opt-in via Cloud KMS only",
+      "Data is encrypted only in transit, not at rest"
+    ],
+    "correct_index": 1,
+    "explanation": "Google encrypts customer data at rest by default with AES-256, no configuration required. CMEK and CSEK are opt-in upgrades for additional control; data is also encrypted in transit by default.",
+    "doc_links": [
+      {
+        "title": "Default encryption at rest",
+        "url": "https://cloud.google.com/docs/security/encryption/default-encryption"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.2-005",
+    "exam": "architect",
+    "section": "PCA-3.2",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service is used to manage symmetric and asymmetric cryptographic keys with rotation, IAM, and integration into other services?",
+    "options": [
+      "Secret Manager",
+      "Cloud KMS",
+      "Cloud HSM (only)",
+      "Certificate Authority Service"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud KMS provides managed cryptographic keys with rotation, IAM, and integration via CMEK across many services. Secret Manager stores secrets (not keys), Cloud HSM is a key-protection backend within KMS, and CA Service issues certificates.",
+    "doc_links": [
+      {
+        "title": "Cloud KMS",
+        "url": "https://cloud.google.com/kms/docs/key-management-service"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.2-006",
+    "exam": "architect",
+    "section": "PCA-3.2",
+    "difficulty": "medium",
+    "text": "A regulated workload requires that the customer holds and rotates the encryption keys used to encrypt GCS objects, with an auditable trail when Google services use those keys. Which option fits BEST?",
+    "options": [
+      "Default Google-managed keys",
+      "Customer-Managed Encryption Keys (CMEK) in Cloud KMS, with key access logged via Cloud Audit Logs",
+      "Customer-Supplied Encryption Keys (CSEK) provided on every request only",
+      "Application-layer encryption with keys in environment variables"
+    ],
+    "correct_index": 1,
+    "explanation": "CMEK gives customers ownership and rotation of the keys while letting GCS use them transparently; KMS access is recorded in Cloud Audit Logs. Default keys offer no customer control, CSEK requires per-request key supply (operationally fragile), and env-var keys defeat KMS protections.",
+    "doc_links": [
+      {
+        "title": "Customer-managed encryption keys",
+        "url": "https://cloud.google.com/kms/docs/cmek"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.2-007",
+    "exam": "architect",
+    "section": "PCA-3.2",
+    "difficulty": "medium",
+    "text": "A team must store API tokens and database passwords for use by Cloud Run services with versioning, audit, and IAM-controlled access. Which service is the canonical fit?",
+    "options": [
+      "Cloud KMS",
+      "Secret Manager",
+      "Firestore document with field-level encryption",
+      "Cloud Storage object with `private` ACL"
+    ],
+    "correct_index": 1,
+    "explanation": "Secret Manager is purpose-built for storing application secrets with versioning, IAM, audit logs, and Cloud Run integration. KMS manages keys (not secrets directly), Firestore is a database not a secret store, and ACL'd GCS objects lack versioned secret semantics and rotation tooling.",
+    "doc_links": [
+      {
+        "title": "Secret Manager",
+        "url": "https://cloud.google.com/secret-manager/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.2-008",
+    "exam": "architect",
+    "section": "PCA-3.2",
+    "difficulty": "hard",
+    "text": "A bank requires that the encryption keys used for sensitive data NEVER leave a FIPS 140-2 Level 3 hardware boundary controlled by Google. Which option satisfies this?",
+    "options": [
+      "Software-protected CMEK in Cloud KMS",
+      "Cloud HSM keys (FIPS 140-2 Level 3 hardware-backed) used as CMEK",
+      "External Key Manager (EKM) without hardware backing",
+      "Default Google encryption only"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud HSM provides hardware-backed keys validated to FIPS 140-2 Level 3, used transparently as CMEK across supported services. Software-protected KMS is FIPS 140-2 Level 1, EKM hosts keys outside Google entirely (different requirement), and default encryption gives no customer key control.",
+    "doc_links": [
+      {
+        "title": "Cloud HSM",
+        "url": "https://cloud.google.com/kms/docs/hsm"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.2-009",
+    "exam": "architect",
+    "section": "PCA-3.2",
+    "difficulty": "hard",
+    "text": "An architect needs to ensure that even if Google were compelled to disclose data, no plaintext could be recovered without a key held outside Google's control. Which design fits BEST?",
+    "options": [
+      "CMEK in Cloud KMS with software protection so the wrapping key never leaves the Google-operated KMS service",
+      "Cloud External Key Manager (EKM) with keys held by a third-party key partner outside Google",
+      "Confidential VMs with default Google-managed encryption so workload memory is encrypted with hardware-isolated keys",
+      "Secret Manager with replication policy automatic and CMEK so the application secrets stay protected at rest in every region"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud EKM stores keys in an external third-party key manager so Google cannot decrypt without that external authorization. CMEK keys still live in Google KMS, Confidential VMs encrypt RAM but use Google-controlled keys, and Secret Manager doesn't change the encryption boundary.",
+    "doc_links": [
+      {
+        "title": "Cloud External Key Manager",
+        "url": "https://cloud.google.com/kms/docs/ekm"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.3-004",
+    "exam": "architect",
+    "section": "PCA-3.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud feature lets an organization enforce a centrally-defined rule across all projects, such as 'disallow VMs with external IPs'?",
+    "options": [
+      "IAM custom roles",
+      "Organization Policy Service constraints",
+      "Cloud Audit Logs",
+      "Project labels"
+    ],
+    "correct_index": 1,
+    "explanation": "Organization Policy Service applies constraints (e.g., `compute.vmExternalIpAccess`) inheritably down the resource hierarchy. IAM grants permissions but doesn't enforce structural constraints, audit logs only record events, and labels are metadata.",
+    "doc_links": [
+      {
+        "title": "Organization Policy Service",
+        "url": "https://cloud.google.com/resource-manager/docs/organization-policy/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.3-005",
+    "exam": "architect",
+    "section": "PCA-3.3",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service surfaces actionable security findings (misconfigurations, vulnerabilities, threats) across an organization in one place?",
+    "options": [
+      "Cloud Logging",
+      "Security Command Center",
+      "Cloud Asset Inventory",
+      "Recommender"
+    ],
+    "correct_index": 1,
+    "explanation": "Security Command Center (SCC) aggregates security findings from built-in and integrated services across the org. Cloud Logging stores logs, Asset Inventory lists resources/IAM, and Recommender suggests cost/perf optimizations.",
+    "doc_links": [
+      {
+        "title": "Security Command Center",
+        "url": "https://cloud.google.com/security-command-center/docs/security-command-center-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.3-006",
+    "exam": "architect",
+    "section": "PCA-3.3",
+    "difficulty": "medium",
+    "text": "A regulated workload must be limited to specific GCP services AND prevented from exfiltrating data into other projects via service APIs. Which control is the canonical fit?",
+    "options": [
+      "VPC firewall egress rules denying outbound traffic to all IP ranges except an allowlist maintained by the network security team",
+      "VPC Service Controls perimeter around the projects, restricting service access and cross-perimeter data movement",
+      "An Organization Policy disallowing external IP addresses on Compute Engine instances and Cloud Run services across the org",
+      "IAM Conditions on each service-enabling binding using `request.host` to gate access by the requesting hostname per call"
+    ],
+    "correct_index": 1,
+    "explanation": "VPC Service Controls create a service perimeter that prevents API-level data movement out of the bounded projects \u2014 the standard control for API-based exfiltration. Network firewall rules don't see service-API context, org policy on external IPs only blocks public IPs, and IAM Conditions can't enforce cross-project data movement at the service layer.",
+    "doc_links": [
+      {
+        "title": "VPC Service Controls overview",
+        "url": "https://cloud.google.com/vpc-service-controls/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.3-007",
+    "exam": "architect",
+    "section": "PCA-3.3",
+    "difficulty": "medium",
+    "text": "Which combination provides PCI DSS-aligned scope reduction for a payments microservice handling cardholder data on GCP?",
+    "options": [
+      "Place the service in a dedicated project + folder, apply VPC Service Controls, restrict IAM to a small set of principals, and isolate data in a separate KMS keyring",
+      "Use a single shared project with all workloads and rely on labels to mark PCI workloads",
+      "Disable Cloud Logging to reduce auditor scope",
+      "Use sole-tenant nodes only"
+    ],
+    "correct_index": 0,
+    "explanation": "Project/folder isolation, perimeter controls, restricted IAM, and dedicated key material together reduce PCI scope by clearly bounding cardholder-data systems. Sharing a project, disabling logging, and sole-tenant alone do not establish the scope boundary auditors require.",
+    "doc_links": [
+      {
+        "title": "Google Cloud PCI DSS",
+        "url": "https://cloud.google.com/security/compliance/pci-dss"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.3-008",
+    "exam": "architect",
+    "section": "PCA-3.3",
+    "difficulty": "hard",
+    "text": "A FedRAMP High customer requires US-only personnel and US-only data handling for a workload, with cryptographic and operational guardrails enforced by Google. Which offering is designed for this?",
+    "options": [
+      "Standard Google Cloud regions in the US with CMEK",
+      "Assured Workloads for US Regions / FedRAMP High control package",
+      "Sovereign cloud partner only",
+      "Anthos on bare metal"
+    ],
+    "correct_index": 1,
+    "explanation": "Assured Workloads enforces FedRAMP High data residency and personnel constraints with built-in policy guardrails. Vanilla regions plus CMEK do not enforce personnel or operational scope; sovereign partners and Anthos solve other problems.",
+    "doc_links": [
+      {
+        "title": "Assured Workloads control packages",
+        "url": "https://cloud.google.com/assured-workloads/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-3.3-009",
+    "exam": "architect",
+    "section": "PCA-3.3",
+    "difficulty": "hard",
+    "text": "A team must continuously detect IAM drift (new owner grants, deleted policies) across a 200-project org and trigger remediation workflows. Which architecture fits BEST?",
+    "options": [
+      "Have the security team perform a quarterly manual review of IAM policies in the console for each of the 200 projects",
+      "Use Cloud Asset Inventory feeds for IAM-policy changes to Pub/Sub, processed by Cloud Functions / Workflows, with Security Command Center for centralized findings",
+      "Configure per-project log-based metrics on SetIamPolicy events and rely on per-project alerting for remediation",
+      "Disable IAM policy changes for everyone except the security team and require a ticket for every grant or revocation request"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Asset Inventory feeds emit IAM-policy changes in near-real-time to Pub/Sub; downstream automation evaluates and remediates while SCC centralizes findings \u2014 the canonical org-wide drift-detection pattern. Manual review doesn't scale, log-based metrics alone don't carry policy structure, and blanket-blocking IAM changes prevents legitimate work.",
+    "doc_links": [
+      {
+        "title": "Cloud Asset Inventory feeds",
+        "url": "https://cloud.google.com/asset-inventory/docs/monitoring-asset-changes"
+      },
+      {
+        "title": "Security Command Center",
+        "url": "https://cloud.google.com/security-command-center/docs/security-command-center-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.1-004",
+    "exam": "architect",
+    "section": "PCA-4.1",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service is the managed CI/CD platform for building and deploying to GKE, Cloud Run, and GCE?",
+    "options": [
+      "Cloud Deploy",
+      "Cloud Build",
+      "Cloud Source Repositories",
+      "Artifact Registry"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Build executes build, test, and deploy pipelines on GCP. Cloud Deploy is the managed continuous-delivery (release-promotion) layer that often invokes Cloud Build artifacts; Source Repos hosts code; Artifact Registry stores artifacts.",
+    "doc_links": [
+      {
+        "title": "Cloud Build",
+        "url": "https://cloud.google.com/build/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.1-005",
+    "exam": "architect",
+    "section": "PCA-4.1",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service stores container images, Maven, npm, Python, and other artifacts in regional repositories?",
+    "options": [
+      "Cloud Storage buckets only",
+      "Artifact Registry",
+      "Container Registry (recommended for new projects)",
+      "Cloud Source Repositories"
+    ],
+    "correct_index": 1,
+    "explanation": "Artifact Registry is Google's recommended artifact store for containers and language packages. Container Registry is a deprecated predecessor, GCS is generic storage, and Source Repos hosts code.",
+    "doc_links": [
+      {
+        "title": "Artifact Registry overview",
+        "url": "https://cloud.google.com/artifact-registry/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.1-006",
+    "exam": "architect",
+    "section": "PCA-4.1",
+    "difficulty": "medium",
+    "text": "A team wants standardized release promotion across dev\u2192staging\u2192prod for a Cloud Run service, with manual approval at the prod gate and automatic rollback on metric breach. Which service is purpose-built for this?",
+    "options": [
+      "Cloud Build only, with branch triggers",
+      "Cloud Deploy with delivery pipelines, targets, and approvals",
+      "Cloud Tasks queues",
+      "Workflows"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Deploy provides first-class delivery pipelines with promotion stages, approvals, and rollback for GKE, Cloud Run, and GCE. Cloud Build can stitch this together but lacks the release-management primitives; Tasks/Workflows are general orchestration tools.",
+    "doc_links": [
+      {
+        "title": "Cloud Deploy",
+        "url": "https://cloud.google.com/deploy/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.1-007",
+    "exam": "architect",
+    "section": "PCA-4.1",
+    "difficulty": "medium",
+    "text": "An organization wants their CI to enforce that only images built by a trusted build system can be deployed to production GKE clusters. Which combination provides this?",
+    "options": [
+      "Cloud Build producing signed attestations + Binary Authorization policy on GKE requiring those attestations",
+      "Cloud Build with workload identity only",
+      "Manual code review and a merge-only branch",
+      "Artifact Registry with vulnerability scanning enabled"
+    ],
+    "correct_index": 0,
+    "explanation": "Binary Authorization enforces deploy-time policies that admit only images carrying valid attestations \u2014 typically produced by trusted CI like Cloud Build. WIF, code review, and vulnerability scanning improve security but don't enforce the deploy-time admission rule.",
+    "doc_links": [
+      {
+        "title": "Binary Authorization",
+        "url": "https://cloud.google.com/binary-authorization/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.1-008",
+    "exam": "architect",
+    "section": "PCA-4.1",
+    "difficulty": "hard",
+    "text": "An enterprise wants SLSA Level 3 build provenance for container images deployed to production. Which Google Cloud capability is the canonical fit?",
+    "options": [
+      "Artifact Registry with vulnerability scanning",
+      "Cloud Build with built-in SLSA Level 3 build provenance and Software Delivery Shield (Binary Authorization, Assured OSS)",
+      "Cloud Deploy approvals only",
+      "GCS object signing"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Build emits SLSA Level 3 provenance for container builds, and Software Delivery Shield ties together provenance, Binary Authorization, and Assured OSS for end-to-end supply chain integrity. Vulnerability scanning, deploy approvals, and GCS signing each address narrower problems.",
+    "doc_links": [
+      {
+        "title": "Cloud Build SLSA build provenance",
+        "url": "https://cloud.google.com/build/docs/securing-builds/view-build-provenance"
+      },
+      {
+        "title": "Software Delivery Shield",
+        "url": "https://cloud.google.com/software-supply-chain-security/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.1-009",
+    "exam": "architect",
+    "section": "PCA-4.1",
+    "difficulty": "hard",
+    "text": "A platform team must enforce that infrastructure changes flow through code review, are previewed before apply, and that drift from declared state is detected. Which design fits BEST on GCP?",
+    "options": [
+      "Have privileged engineers run gcloud commands manually from their workstations and capture the output in a shared change log",
+      "PR-driven Terraform plans run via Cloud Build / Infrastructure Manager, applied with an attached service account, with periodic drift checks",
+      "Allow direct console edits in production projects and audit them after the fact via Cloud Audit Logs and weekly review meetings",
+      "Maintain a spreadsheet of approved configurations and require platform engineers to reconcile each project against it each quarter"
+    ],
+    "correct_index": 1,
+    "explanation": "PR-driven Terraform with Cloud Build (or Infrastructure Manager) gives reviewable plans, controlled apply, and supports periodic drift detection via re-plans. Manual CLI, console edits, and spreadsheets are the anti-patterns that this control model exists to replace.",
+    "doc_links": [
+      {
+        "title": "Infrastructure Manager",
+        "url": "https://cloud.google.com/infrastructure-manager/docs/overview"
+      },
+      {
+        "title": "Terraform on Google Cloud",
+        "url": "https://cloud.google.com/docs/terraform"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.2-004",
+    "exam": "architect",
+    "section": "PCA-4.2",
+    "difficulty": "easy",
+    "text": "Which Google Cloud feature lets a finance team see daily project costs broken out by service, label, and SKU?",
+    "options": [
+      "Cloud Monitoring dashboards",
+      "Cloud Billing reports and BigQuery billing export",
+      "Cloud Logging metrics",
+      "Recommender"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Billing provides reports in the console and a BigQuery billing export for ad-hoc analysis by service/label/SKU. Monitoring, Logging, and Recommender don't carry billing data at this granularity.",
+    "doc_links": [
+      {
+        "title": "Cloud Billing reports",
+        "url": "https://cloud.google.com/billing/docs/how-to/reports"
+      },
+      {
+        "title": "BigQuery billing export",
+        "url": "https://cloud.google.com/billing/docs/how-to/export-data-bigquery"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.2-005",
+    "exam": "architect",
+    "section": "PCA-4.2",
+    "difficulty": "easy",
+    "text": "Which feature notifies an owner when a project's spend approaches a defined threshold for the month?",
+    "options": [
+      "Cloud Billing budgets and alerts",
+      "Cloud Monitoring uptime checks",
+      "Recommender",
+      "Cloud Logging sinks"
+    ],
+    "correct_index": 0,
+    "explanation": "Budgets and alerts in Cloud Billing send Pub/Sub or email notifications at configurable percentage thresholds. Uptime checks, Recommender, and log sinks address different concerns.",
+    "doc_links": [
+      {
+        "title": "Cloud Billing budgets",
+        "url": "https://cloud.google.com/billing/docs/how-to/budgets"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.2-006",
+    "exam": "architect",
+    "section": "PCA-4.2",
+    "difficulty": "medium",
+    "text": "A team running a steady 24/7 GCE workload wants to reduce its compute bill by ~30\u201355% with a multi-year commitment but retain the ability to change machine families within the family group. Which option is BEST?",
+    "options": [
+      "Spot VMs sized to the steady-state load, accepting the ~30s preemption notice and rebuilding state from durable storage",
+      "Resource-based committed use discounts (1- or 3-year)",
+      "Sustained use discounts only, applied automatically to whichever instances happen to run for most of each billing month",
+      "Sole-tenant nodes provisioned to match the workload's vCPU and memory footprint, with no committed-use commitment attached"
+    ],
+    "correct_index": 1,
+    "explanation": "Resource-based CUDs deliver 30\u201355%+ savings for steady-state usage with 1- or 3-year terms, and flex CUDs allow changes within a family group. Spot is for interruptible workloads, SUDs apply automatically and yield smaller savings, and sole-tenant is about isolation, not savings.",
+    "doc_links": [
+      {
+        "title": "Committed use discounts",
+        "url": "https://cloud.google.com/docs/cuds"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.2-007",
+    "exam": "architect",
+    "section": "PCA-4.2",
+    "difficulty": "medium",
+    "text": "Which approach BEST attributes shared platform costs (logging, monitoring, networking) to consuming product teams?",
+    "options": [
+      "Run every project from a single shared Google Cloud project with no labels and reconcile costs in a quarterly spreadsheet",
+      "Per-team folders/projects with mandatory team and cost-center labels enforced by Org Policy, queried from BigQuery billing-export by label",
+      "Have the FinOps team produce monthly cost-attribution spreadsheets by hand from the console billing reports and circulate them",
+      "Use a single Cloud Billing account split arbitrarily across teams by manual percentage at the end of each billing month"
+    ],
+    "correct_index": 1,
+    "explanation": "Folder/project structure plus enforced labels feeding BigQuery billing-export queries gives granular, auditable showback/chargeback. Single projects, manual spreadsheets, and arbitrary splits all break attribution.",
+    "doc_links": [
+      {
+        "title": "Resource hierarchy",
+        "url": "https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy"
+      },
+      {
+        "title": "Org policy: required labels",
+        "url": "https://cloud.google.com/resource-manager/docs/labels-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.2-008",
+    "exam": "architect",
+    "section": "PCA-4.2",
+    "difficulty": "hard",
+    "text": "A platform owner wants to safely apply Recommender suggestions (idle VMs, oversized machines) at scale without manual approvals for low-risk recommendations. Which design fits BEST?",
+    "options": [
+      "Have the on-call FinOps engineer manually click each Recommender suggestion in the console after a daily review session",
+      "Read Recommender programmatically via API/Asset Inventory, classify by risk, auto-apply low-risk via a workflow with audit logs, queue higher-risk for review",
+      "Disable Recommender at the organization level so the team is not distracted by its noisy suggestions during normal operations",
+      "Apply every Recommender suggestion immediately at scale, including production downsizing, to maximize realized cost savings"
+    ],
+    "correct_index": 1,
+    "explanation": "Reading Recommender programmatically and gating by risk class is the canonical FinOps automation pattern, with auditability via Cloud Audit Logs. Manual-only doesn't scale, disabling forfeits savings, and blanket auto-apply is dangerous in production.",
+    "doc_links": [
+      {
+        "title": "Recommender",
+        "url": "https://cloud.google.com/recommender/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-4.2-009",
+    "exam": "architect",
+    "section": "PCA-4.2",
+    "difficulty": "hard",
+    "text": "An organization signs a Google Cloud commitment with a baseline spend across BigQuery slots and Compute Engine. They want to optimize portfolio-wide commitment usage and avoid stranded capacity. Which approach is BEST?",
+    "options": [
+      "Dedicate fixed CUD blocks per team and prohibit reallocation",
+      "Use Billing accounts with consolidated reporting + flex CUDs/Editions autoscaling reservations + a periodic FinOps review using Recommender and Billing exports",
+      "Buy 3-year resource-based CUDs for every workload regardless of stability",
+      "Use only Spot VMs to avoid commitment risk"
+    ],
+    "correct_index": 1,
+    "explanation": "Consolidated billing + flexible commitments (flex CUDs and BigQuery autoscaling reservations) + recurring FinOps reviews lets the org rebalance commitments to actual usage. Locking commitments per team strands capacity, blanket 3-year CUDs is risky for variable workloads, and Spot-only forfeits steady-state savings.",
+    "doc_links": [
+      {
+        "title": "Flexible CUDs",
+        "url": "https://cloud.google.com/compute/docs/instances/signing-up-committed-use-discounts"
+      },
+      {
+        "title": "BigQuery reservations",
+        "url": "https://cloud.google.com/bigquery/docs/reservations-intro"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.1-003",
+    "exam": "architect",
+    "section": "PCA-5.1",
+    "difficulty": "easy",
+    "text": "Which Google framework provides best-practice guidance organized by reliability, security, cost, and performance pillars for cloud workloads?",
+    "options": [
+      "AWS Well-Architected Framework",
+      "Google Cloud Architecture Framework",
+      "ITIL v4",
+      "TOGAF"
+    ],
+    "correct_index": 1,
+    "explanation": "The Google Cloud Architecture Framework is Google's pillar-based best-practice guidance. AWS has its own framework, and ITIL/TOGAF are industry frameworks not specific to GCP.",
+    "doc_links": [
+      {
+        "title": "Google Cloud Architecture Framework",
+        "url": "https://cloud.google.com/architecture/framework"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.1-004",
+    "exam": "architect",
+    "section": "PCA-5.1",
+    "difficulty": "easy",
+    "text": "Which role typically owns long-term cloud cost optimization, governance, and engineering enablement across an enterprise?",
+    "options": [
+      "The IT help desk team that handles end-user account password resets and laptop hardware tickets across the organization",
+      "Cloud Center of Excellence (CCoE) / Platform team",
+      "A single database administrator group focused on schema design and performance tuning for the production database fleet",
+      "The owner of one Google Cloud project, responsible only for the resources and IAM bindings inside that single project"
+    ],
+    "correct_index": 1,
+    "explanation": "A CCoE/Platform team is the standard organizational pattern that owns multi-team cloud governance, FinOps, paved paths, and enablement. Help desk, DBA, and project owner roles have narrower scope.",
+    "doc_links": [
+      {
+        "title": "Cloud Adoption Framework",
+        "url": "https://cloud.google.com/adoption-framework"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.1-005",
+    "exam": "architect",
+    "section": "PCA-5.1",
+    "difficulty": "medium",
+    "text": "A startup wants to enable many small teams to ship to GCP independently while keeping a central security baseline. Which pattern is MOST appropriate?",
+    "options": [
+      "One enormous shared project for all teams",
+      "Folders per business unit, projects per workload, organization policies for the security baseline, and a shared 'platform' project for common infrastructure",
+      "Each team uses its own personal Google account and pays with a credit card",
+      "Single-region single-project deployment with IAM-only separation"
+    ],
+    "correct_index": 1,
+    "explanation": "The recommended landing-zone pattern uses folders for org structure, per-workload projects for blast-radius isolation, org policies for the security baseline, and a shared platform project for common infrastructure. The other options either over-share or fragment governance.",
+    "doc_links": [
+      {
+        "title": "Landing zone design",
+        "url": "https://cloud.google.com/architecture/landing-zones"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.1-006",
+    "exam": "architect",
+    "section": "PCA-5.1",
+    "difficulty": "medium",
+    "text": "Which practice helps an organization moving to GCP avoid 'snowflake' projects with one-off configurations?",
+    "options": [
+      "Free-form clicks in the console",
+      "Reusable infrastructure-as-code modules + a project-vending machine that provisions standard projects on request",
+      "Per-team Terraform modules with no central standards",
+      "Disabling Organization Policy"
+    ],
+    "correct_index": 1,
+    "explanation": "Project-factory / vending-machine patterns built on IaC modules ensure every new project starts from the same baseline. Console clicks, fragmented modules, and disabling org policy all create the snowflakes the question asks how to avoid.",
+    "doc_links": [
+      {
+        "title": "Project factory pattern (Cloud Foundation)",
+        "url": "https://cloud.google.com/foundation-toolkit"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.1-007",
+    "exam": "architect",
+    "section": "PCA-5.1",
+    "difficulty": "medium",
+    "text": "A leadership team is unsure whether to refactor a legacy on-prem app or lift-and-shift it to GCE first. Which advice is consistent with Google's migration guidance?",
+    "options": [
+      "Always refactor every workload first; lift-and-shift to GCE is never appropriate for a serious enterprise migration program",
+      "Use the 7Rs to classify each workload by business priority and technical fit, often starting with rehost for speed and refactoring in later waves",
+      "Always lift-and-shift every workload to GCE first; refactoring is not necessary once the workload is running on Google Cloud",
+      "Skip the migration planning phase and move workloads to Google Cloud in alphabetical order by application name"
+    ],
+    "correct_index": 1,
+    "explanation": "Google's migration guidance recommends classifying workloads by the 7Rs and choosing the right strategy per workload, often starting with rehost to gain speed and modernizing in waves. Both 'always refactor' and 'always rehost' ignore workload context, and unplanned migration is a recipe for failure.",
+    "doc_links": [
+      {
+        "title": "Migration to Google Cloud (overview)",
+        "url": "https://cloud.google.com/architecture/migration-to-gcp-getting-started"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.1-008",
+    "exam": "architect",
+    "section": "PCA-5.1",
+    "difficulty": "hard",
+    "text": "An enterprise wants to mature its cloud adoption from 'tactical' (per-team experiments) to 'transformational' (org-wide capability). Per Google's Cloud Adoption Framework, which combination of investments BEST drives that maturity shift?",
+    "options": [
+      "Buy more 3-year committed-use discounts to lock in pricing and let teams self-organize around the resulting capacity allocations",
+      "Establish a CCoE; standardize landing zones and golden paths; adopt FinOps; build SRE practices; sponsor org-wide training and change management",
+      "Switch the org to a multi-cloud strategy without a workload-fit assessment to maximize negotiating leverage with each provider",
+      "Move all newly-cloud workloads back on-prem so the org can re-run the adoption process with the lessons learned from the tactical phase"
+    ],
+    "correct_index": 1,
+    "explanation": "The Cloud Adoption Framework calls out people (CCoE, training), process (FinOps, SRE), and technology (landing zones, golden paths) as the levers that move organizations from tactical to transformational. The other options are not maturity-shifting investments.",
+    "doc_links": [
+      {
+        "title": "Google Cloud Adoption Framework",
+        "url": "https://cloud.google.com/adoption-framework"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.1-009",
+    "exam": "architect",
+    "section": "PCA-5.1",
+    "difficulty": "hard",
+    "text": "A risk-averse customer is debating multi-cloud vs single-cloud for a new platform. Which advice aligns with Google's published guidance on portability and resilience?",
+    "options": [
+      "Always go multi-cloud from day one to avoid vendor lock-in, even when no business driver requires it",
+      "Prefer single-cloud with portable abstractions (containers, open standards); use multi-cloud (Anthos / GDC) only for clear drivers like data sovereignty, M&A, or best-of-breed services",
+      "Standardize on a single cloud forever and forbid any workload from running in another provider under any circumstance",
+      "Run identical active-active copies of every workload across AWS, Azure, and Google Cloud to maximize resilience"
+    ],
+    "correct_index": 1,
+    "explanation": "Google's guidance is to avoid multi-cloud complexity unless concrete drivers justify it, while keeping workloads portable via containers/open APIs and using Anthos/GDC for the cases where multi-environment is genuinely required. The 'always' and 'never' positions, and triple-running everywhere, are not aligned with that guidance.",
+    "doc_links": [
+      {
+        "title": "Anthos / GKE Enterprise",
+        "url": "https://cloud.google.com/kubernetes-engine/enterprise/docs/concepts/overview"
+      },
+      {
+        "title": "Multi-cloud architectures",
+        "url": "https://cloud.google.com/architecture/hybrid-multicloud-patterns-and-practices"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.2-004",
+    "exam": "architect",
+    "section": "PCA-5.2",
+    "difficulty": "easy",
+    "text": "Which CLI is the primary interface for managing most Google Cloud resources from a terminal or script?",
+    "options": [
+      "`aws`",
+      "`gcloud` (Google Cloud SDK)",
+      "`kubectl` only",
+      "`terraform` only"
+    ],
+    "correct_index": 1,
+    "explanation": "`gcloud` is the official Google Cloud CLI for resource management and scripting. `aws` is for AWS, `kubectl` is for Kubernetes specifically, and Terraform is an IaC tool that calls underlying APIs.",
+    "doc_links": [
+      {
+        "title": "gcloud CLI overview",
+        "url": "https://cloud.google.com/sdk/gcloud"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.2-005",
+    "exam": "architect",
+    "section": "PCA-5.2",
+    "difficulty": "easy",
+    "text": "Which interactive shell environment lets you run `gcloud` and `kubectl` from a browser with no local install?",
+    "options": [
+      "Cloud Shell",
+      "Local Bash on the user's laptop",
+      "BigQuery Studio",
+      "Apigee proxy"
+    ],
+    "correct_index": 0,
+    "explanation": "Cloud Shell provides a browser-based Linux shell with the SDK pre-installed and a small persistent home directory. The other options are not browser-based GCP shells.",
+    "doc_links": [
+      {
+        "title": "Cloud Shell",
+        "url": "https://cloud.google.com/shell/docs"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.2-009",
+    "exam": "architect",
+    "section": "PCA-5.2",
+    "difficulty": "medium",
+    "text": "A team needs to call Google Cloud APIs from many environments (CI, on-prem, partner clouds) without long-lived service-account keys. Which authentication mechanism is recommended?",
+    "options": [
+      "API keys hard-coded into the application source repository and rotated quarterly via a manual pull request",
+      "Application Default Credentials backed by Workload Identity Federation",
+      "User OAuth refresh tokens generated by an engineer locally and shared with each environment via email and chat",
+      "Per-environment HTTP Basic auth credentials stored in plaintext config files and read by the application at startup"
+    ],
+    "correct_index": 1,
+    "explanation": "ADC + WIF is the recommended pattern for keyless authentication from external workloads, supported across many providers. The other options are exactly the long-lived-credential anti-patterns WIF replaces.",
+    "doc_links": [
+      {
+        "title": "Application Default Credentials",
+        "url": "https://cloud.google.com/docs/authentication/application-default-credentials"
+      },
+      {
+        "title": "Workload Identity Federation",
+        "url": "https://cloud.google.com/iam/docs/workload-identity-federation"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.2-006",
+    "exam": "architect",
+    "section": "PCA-5.2",
+    "difficulty": "medium",
+    "text": "Which approach BEST organizes large-scale `gcloud` automation for repeatable, reviewable infrastructure changes across multiple projects?",
+    "options": [
+      "Bash scripts copied between machines",
+      "Terraform (or Infrastructure Manager) source code in version control with PR review and CI/CD execution",
+      "Manual console clicks recorded in Word documents",
+      "Per-engineer ad-hoc gcloud commands"
+    ],
+    "correct_index": 1,
+    "explanation": "IaC under version control with PR review and CI/CD execution is Google's recommended way to scale repeatable, reviewable infra changes. Bash scripts, console clicks, and ad-hoc commands all break repeatability and audit.",
+    "doc_links": [
+      {
+        "title": "Terraform on Google Cloud",
+        "url": "https://cloud.google.com/docs/terraform"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.2-007",
+    "exam": "architect",
+    "section": "PCA-5.2",
+    "difficulty": "hard",
+    "text": "A regulated team needs API access from on-prem to Google APIs that does NOT traverse the public internet. Which solution fits BEST?",
+    "options": [
+      "Public APIs over Cloud NAT",
+      "Private Google Access for on-premises hosts via Interconnect/VPN, hitting `private.googleapis.com` or `restricted.googleapis.com`",
+      "Whitelist source IPs in IAM",
+      "Use a personal proxy on the engineer's laptop"
+    ],
+    "correct_index": 1,
+    "explanation": "Private Google Access for on-premises hosts (with the `private`/`restricted` API endpoints) routes API calls over Interconnect/VPN to Google's private network, never the public internet. NAT and IAM IP allowlists don't change the network path; a personal proxy is not a sanctioned solution.",
+    "doc_links": [
+      {
+        "title": "Private Google Access for on-premises hosts",
+        "url": "https://cloud.google.com/vpc/docs/private-google-access-hybrid"
+      }
+    ]
+  },
+  {
+    "id": "pca-5.2-008",
+    "exam": "architect",
+    "section": "PCA-5.2",
+    "difficulty": "hard",
+    "text": "A central security team wants every project's API calls auditable, with admin activity logs immutable and accessible for at least 7 years across the organization. Which design fits BEST?",
+    "options": [
+      "Rely on the default per-project Cloud Logging retention with no aggregation and no immutability controls applied at the org level",
+      "Aggregated org-level log sink routing Admin Activity logs to a Cloud Storage bucket with Bucket Lock 7-year retention (or BigQuery with retention)",
+      "Have an admin manually screenshot the console activity pages periodically and store the screenshots in a shared drive folder",
+      "Disable Cloud Audit Logs across the organization to reduce log-storage cost and the resulting BigQuery query expense"
+    ],
+    "correct_index": 1,
+    "explanation": "Org-level aggregated sinks centralize logs across all projects, and Bucket Lock makes retention immutable for the required period. Default per-project retention is too short and not centralized; screenshots aren't durable; disabling audit logs is non-compliant.",
+    "doc_links": [
+      {
+        "title": "Aggregated sinks",
+        "url": "https://cloud.google.com/logging/docs/export/aggregated_sinks"
+      },
+      {
+        "title": "Bucket Lock",
+        "url": "https://cloud.google.com/storage/docs/bucket-lock"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.1-004",
+    "exam": "architect",
+    "section": "PCA-6.1",
+    "difficulty": "easy",
+    "text": "Which Google Cloud service collects logs from GCP services and user applications and provides a unified query interface?",
+    "options": [
+      "Cloud Logging",
+      "Cloud Trace",
+      "Cloud Profiler",
+      "Cloud Run"
+    ],
+    "correct_index": 0,
+    "explanation": "Cloud Logging ingests platform and application logs and provides a unified Logs Explorer. Trace is for latency spans, Profiler is for CPU/heap profiles, and Cloud Run is a compute platform.",
+    "doc_links": [
+      {
+        "title": "Cloud Logging overview",
+        "url": "https://cloud.google.com/logging/docs/overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.1-005",
+    "exam": "architect",
+    "section": "PCA-6.1",
+    "difficulty": "easy",
+    "text": "Which service stores time-series metrics from GCP services and lets you build dashboards and alerts?",
+    "options": [
+      "Cloud Monitoring",
+      "Cloud Logging",
+      "Cloud Source Repositories",
+      "Pub/Sub"
+    ],
+    "correct_index": 0,
+    "explanation": "Cloud Monitoring is Google's managed metrics, dashboards, and alerting service. Logging is for log data, Source Repos hosts code, and Pub/Sub is messaging.",
+    "doc_links": [
+      {
+        "title": "Cloud Monitoring overview",
+        "url": "https://cloud.google.com/monitoring/docs/monitoring-overview"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.1-006",
+    "exam": "architect",
+    "section": "PCA-6.1",
+    "difficulty": "medium",
+    "text": "An SRE team wants to alert when an HTTP service's 5xx error rate exceeds 1% over a 5-minute window. Which Cloud Monitoring construct is the right fit?",
+    "options": [
+      "Configure a Cloud Monitoring uptime check that hits the service homepage every minute and alert on consecutive failures",
+      "Alerting policy on a metric-ratio (5xx requests / total requests) with a 1% threshold over 5 minutes, sent to a notification channel",
+      "Use a Cloud Logging filter that captures 5xx log entries and have the on-call review the saved query each morning",
+      "Configure a Cloud Billing budget alert at the project level so spend spikes from retried error responses surface to the team"
+    ],
+    "correct_index": 1,
+    "explanation": "Alerting policies on metric ratios let you express SLO-style error-rate alerts directly. Uptime checks measure reachability not error rate, log entries are not alerts, and budgets are billing alerts.",
+    "doc_links": [
+      {
+        "title": "Alerting policies",
+        "url": "https://cloud.google.com/monitoring/alerts"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.1-007",
+    "exam": "architect",
+    "section": "PCA-6.1",
+    "difficulty": "medium",
+    "text": "A team needs to measure and report on a service's availability and latency SLOs in Cloud Monitoring with a burn-rate alert. Which feature should they use?",
+    "options": [
+      "Custom dashboard widgets only",
+      "Service monitoring with SLO definitions and burn-rate alerting",
+      "Cloud Trace alone",
+      "Cloud Logging metrics with manual percentiles"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Monitoring's service monitoring (formerly known as service-level monitoring) lets you define SLIs and SLOs with built-in burn-rate alerts. Dashboards visualize but don't compute SLO budgets, Trace measures spans, and log-based metrics are a manual workaround.",
+    "doc_links": [
+      {
+        "title": "SLO monitoring",
+        "url": "https://cloud.google.com/stackdriver/docs/solutions/slo-monitoring"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.1-008",
+    "exam": "architect",
+    "section": "PCA-6.1",
+    "difficulty": "hard",
+    "text": "An organization needs centralized log aggregation across hundreds of projects with long-term storage and SQL-style ad-hoc analysis. Which Cloud Logging design fits BEST?",
+    "options": [
+      "Default _Default sinks per project, queried separately",
+      "Aggregated organization-level log sink to a BigQuery dataset (or Log Analytics-enabled bucket) with partitioned tables and IAM controls for analysts",
+      "Manual export to GCS as JSON, queried by `grep`",
+      "Stream logs to a single project's Cloud Logging without sinks"
+    ],
+    "correct_index": 1,
+    "explanation": "Aggregated org-level sinks plus BigQuery (or a Log Analytics-enabled bucket) provide SQL-style multi-project log analysis with retention. Per-project defaults don't aggregate, GCS+grep is unscalable, and a single project ingest doesn't centralize across the org.",
+    "doc_links": [
+      {
+        "title": "Aggregated sinks",
+        "url": "https://cloud.google.com/logging/docs/export/aggregated_sinks"
+      },
+      {
+        "title": "Log Analytics",
+        "url": "https://cloud.google.com/logging/docs/log-analytics"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.1-009",
+    "exam": "architect",
+    "section": "PCA-6.1",
+    "difficulty": "hard",
+    "text": "An online retailer wants to detect anomalous spikes in order-failure rate that don't follow a static threshold. Which approach is BEST?",
+    "options": [
+      "Configure a static threshold of 5% order-failure rate that pages the on-call rotation as soon as it is breached for any 5-minute window",
+      "Cloud Monitoring with metric-absence and forecast-based / dynamic-threshold alerting (MQL or PromQL) tied to SLO burn rate",
+      "Have the SRE team manually review the order-failure dashboards once a day and open an incident if the trend looks anomalous",
+      "Disable alerting overnight to reduce paging volume and rely on the next morning's review to catch any anomalous failure spikes"
+    ],
+    "correct_index": 1,
+    "explanation": "SLO burn-rate plus forecast/MQL-based alerting catches anomalies that don't follow static thresholds and respects business risk. Static thresholds miss seasonality, daily review is too slow for spikes, and disabling alerts at night defeats the purpose.",
+    "doc_links": [
+      {
+        "title": "Monitoring Query Language",
+        "url": "https://cloud.google.com/monitoring/mql"
+      },
+      {
+        "title": "SLO burn-rate alerts",
+        "url": "https://cloud.google.com/stackdriver/docs/solutions/slo-monitoring/alerting-on-budget-burn-rate"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.2-004",
+    "exam": "architect",
+    "section": "PCA-6.2",
+    "difficulty": "easy",
+    "text": "Which deployment strategy gradually shifts a small percentage of traffic to a new version, monitors metrics, and then proceeds or rolls back?",
+    "options": [
+      "Big-bang",
+      "Canary",
+      "Recreate",
+      "Direct replace"
+    ],
+    "correct_index": 1,
+    "explanation": "Canary deployments route a fraction of traffic to a new version and proceed only if metrics hold. Big-bang/recreate/replace deploy everything at once.",
+    "doc_links": [
+      {
+        "title": "Application deployment patterns",
+        "url": "https://cloud.google.com/architecture/application-deployment-and-testing-strategies"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.2-005",
+    "exam": "architect",
+    "section": "PCA-6.2",
+    "difficulty": "easy",
+    "text": "Which Cloud Run feature lets you route only a percentage of incoming traffic to a newly deployed revision?",
+    "options": [
+      "Service accounts",
+      "Traffic splitting between revisions",
+      "VPC connector",
+      "Concurrency setting"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Run's traffic splitting assigns weighted traffic to specific revisions \u2014 the canonical canary mechanism on Cloud Run. The other settings address identity, networking, and per-instance concurrency.",
+    "doc_links": [
+      {
+        "title": "Cloud Run traffic management",
+        "url": "https://cloud.google.com/run/docs/rollouts-rollbacks-traffic-migration"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.2-006",
+    "exam": "architect",
+    "section": "PCA-6.2",
+    "difficulty": "medium",
+    "text": "A GKE team wants progressive delivery (canary, blue/green) for many microservices with a unified rollout policy. Which managed service fits BEST?",
+    "options": [
+      "Cloud Build only",
+      "Cloud Deploy with canary strategies and approvals",
+      "Cloud Source Repositories",
+      "Cloud Tasks"
+    ],
+    "correct_index": 1,
+    "explanation": "Cloud Deploy supports canary and other progressive strategies with managed promotion and approvals across GKE/Cloud Run/GCE targets. Cloud Build builds artifacts, Source Repos hosts code, and Tasks is general queueing.",
+    "doc_links": [
+      {
+        "title": "Cloud Deploy canary deployments",
+        "url": "https://cloud.google.com/deploy/docs/deployment-strategies/canary"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.2-007",
+    "exam": "architect",
+    "section": "PCA-6.2",
+    "difficulty": "medium",
+    "text": "Which deployment pattern keeps two complete environments (old and new) live, switches traffic atomically at the load balancer, and offers fast rollback by switching back?",
+    "options": [
+      "Rolling update",
+      "Blue/Green deployment",
+      "Canary deployment",
+      "Recreate"
+    ],
+    "correct_index": 1,
+    "explanation": "Blue/green keeps both environments fully running and shifts traffic atomically, with rollback being a switch back. Rolling update overwrites in place; canary shifts gradually; recreate causes downtime.",
+    "doc_links": [
+      {
+        "title": "Deployment strategies",
+        "url": "https://cloud.google.com/architecture/application-deployment-and-testing-strategies"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.2-008",
+    "exam": "architect",
+    "section": "PCA-6.2",
+    "difficulty": "hard",
+    "text": "A team needs to safely test a new ML inference revision on real production traffic, comparing its outputs to the current revision without affecting users. Which technique fits BEST?",
+    "options": [
+      "Big-bang cutover at midnight from the current revision to the new ML inference revision and roll back on the first user-visible error",
+      "Shadow (mirror) traffic to the new revision and compare outputs offline; do not return its responses to users until parity is validated",
+      "Canary 50/50 between the two revisions immediately and compare aggregated quality metrics during the first hour of production use",
+      "Disable the new revision in production and rely on staging dashboards to determine whether it would have produced parity outputs"
+    ],
+    "correct_index": 1,
+    "explanation": "Shadow/mirror traffic replays real requests to the new version while users still receive the old version's responses, perfect for validating ML inference parity safely. Big-bang and aggressive canary expose users to the unvalidated revision; relying on dashboards alone doesn't compare outputs.",
+    "doc_links": [
+      {
+        "title": "Mirror testing patterns",
+        "url": "https://cloud.google.com/architecture/application-deployment-and-testing-strategies#shadow-pattern"
+      }
+    ]
+  },
+  {
+    "id": "pca-6.2-009",
+    "exam": "architect",
+    "section": "PCA-6.2",
+    "difficulty": "hard",
+    "text": "A platform team operating dozens of GKE clusters wants GitOps-style declarative deployments where the cluster state is reconciled to a Git repo, with policy enforcement and drift detection across fleets. Which Google offering is the canonical fit?",
+    "options": [
+      "Each developer running `kubectl apply` from their laptop against the active cluster context whenever a manifest changes",
+      "Config Sync + Policy Controller (part of GKE Enterprise / Anthos Config Management)",
+      "A Cloud Build trigger per repository that applies manifests on push, with no in-cluster controller reconciling drift afterward",
+      "A jumphost VM running a scripted `helm upgrade` loop that re-installs each release on a fixed cron schedule for every cluster"
+    ],
+    "correct_index": 1,
+    "explanation": "Config Sync continuously reconciles cluster state from Git, and Policy Controller enforces guardrails across fleets \u2014 Google's GitOps story. Manual kubectl, ad-hoc Cloud Build, and a scripted Helm VM all lack continuous reconciliation and fleet-wide policy.",
+    "doc_links": [
+      {
+        "title": "Config Sync",
+        "url": "https://cloud.google.com/kubernetes-engine/enterprise/config-sync/docs/overview"
+      },
+      {
+        "title": "Policy Controller",
+        "url": "https://cloud.google.com/kubernetes-engine/enterprise/policy-controller/docs/overview"
       }
     ]
   }
